@@ -1,0 +1,11 @@
+# Variables regridded with nearest-neighbor interpolation (cdo
+# remapnn) instead of the conservative default (cdo remapycon) or the
+# bilinear exception (cdo remapbil, see bilinear_variables.txt).
+#
+# Nearest-neighbor is generally the right choice for categorical or
+# mask-like fields (e.g. ice-sheet fraction masks such as sftgif,
+# sftgrf, sftflf) where averaging would blur a sharp boundary into
+# fractional values instead of picking one class per target cell.
+#
+# Empty for now -- no variable has been confirmed against real data
+# yet. Add one per line, same format as bilinear_variables.txt.

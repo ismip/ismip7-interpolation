@@ -1,0 +1,27 @@
+# Variables that must NOT go through `cdo setmisstoc,0` before
+# remapping. For every other variable, missing/no-ice source cells
+# are filled with 0 before conservative or bilinear remapping, which
+# makes the source field's missing-value mask uniform across
+# timesteps and files -- letting remap weights be precomputed once
+# per (domain, source_res, target_res, method) and reused (see
+# weights/ and ensure_weights() in lib/common.sh). "0" isn't a
+# physically meaningful fill value for these -- e.g. ice velocity
+# outside the ice sheet isn't legitimately "0 m/s" for remapping
+# purposes the way ice thickness legitimately is.
+#
+# A variable in this list can still use the cached weights if its
+# actual data turns out to have no missing values at all (checked at
+# runtime via has_missing_values()) -- the exclusion only matters
+# when there's a real mask to preserve.
+#
+# Initial list = the vector velocity components (same set as
+# bilinear_variables.txt). Confirmed safe for lithk, dlithkdt,
+# sftgif, sftgrf, sftflf -- more may be added as they're confirmed.
+xvelsurf
+yvelsurf
+zvelsurf
+xvelbase
+yvelbase
+zvelbase
+xvelmean
+yvelmean

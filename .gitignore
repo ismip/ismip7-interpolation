@@ -1,0 +1,6 @@
+output/
+tests/fixtures/data/
+.DS_Store
+.claude/
+CLAUDE.md
+schematic/

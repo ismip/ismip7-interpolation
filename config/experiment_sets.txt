@@ -1,0 +1,14 @@
+# Allowed ISMIP7 experiment sets and their valid experiment-number range.
+# Columns: set_name  prefix  min_number  max_number
+#
+# Only experiment-set directories *exactly* named `set_name` are
+# considered (e.g. "CORE"), never "old_CORE", "CORE_old", or a
+# variant like "CESM2-WACCM_CORE" -- these show up alongside real
+# CORE dirs in the real archive as abandoned/renamed copies. The
+# experiment directory below it must match `prefix` + a 3-digit
+# number in [min_number, max_number], e.g. C001..C011 for CORE today.
+#
+# CORE is the only currently-open experiment set. Uncomment/add rows
+# once ESM and PPE open up (per project decision, ESM = E001-E999,
+# PPE = P001-P999 -- confirm the actual allowed range before enabling).
+CORE C 1 11

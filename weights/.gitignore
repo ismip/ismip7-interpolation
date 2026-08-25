@@ -1,0 +1,4 @@
+# Generated cdo remap weight files (see ensure_weights() in
+# lib/common.sh) -- reproducible from the gdfs/, not checked in.
+*
+!.gitignore

@@ -1,0 +1,20 @@
+# Variables regridded with bilinear interpolation (cdo remapbil)
+# instead of the conservative default (cdo remapycon).
+#
+# Source: ISMIP7_variable_request.csv
+# (https://raw.githubusercontent.com/ismip/ISM_SimulationChecker/refs/heads/main/isschecker/data/ISMIP7_variable_request.csv)
+#
+# Initial list = the vector velocity components. Conservative
+# (area-weighted) remapping of an individual vector component isn't
+# physically meaningful the way it is for a scalar state field
+# (thickness, elevation) or a mass/energy flux. NOT yet confirmed
+# against real experiments beyond a first smoke test -- review this
+# list once more test data exists.
+xvelsurf
+yvelsurf
+zvelsurf
+xvelbase
+yvelbase
+zvelbase
+xvelmean
+yvelmean
