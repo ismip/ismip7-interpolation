@@ -6,8 +6,7 @@ Picks conservative, bilinear, or nearest-neighbor remapping per
 variable automatically, reuses a cached set of remap weights per grid
 pair instead of recomputing them for every file, and symlinks (by
 default) files already at the target resolution instead of
-regridding them. Runs on NIRD; see `CLAUDE.md` for architecture
-details.
+regridding them. 
 
 **Terminology**: an **experiment** is one archive directory —
 `<group>/<model>/<experiment-set>/<experiment>`, e.g.
@@ -20,10 +19,8 @@ flattened across the whole archive.
 ## Usage
 
 All scripts live in `scripts/` and share config in `config/` and grid
-definitions in `gdfs/`. They're self-contained bash + CDO — no Claude
-or other tooling required to run them. `ssh` into NIRD (or any other
-server with access to the archive), `cd` into the repo, and run them
-from the repo root:
+definitions in `gdfs/`. They're self-contained bash + CDO
+Run them from the repo root:
 
 ```bash
 ssh nird
