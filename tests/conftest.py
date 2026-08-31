@@ -62,8 +62,11 @@ def fixture_files(tmp_path_factory) -> dict[str, Path]:
     source_gdf = gdf_path('GrIS', SOURCE_RES)
     files: dict[str, Path] = {}
 
-    def spatial(variable: str, missing: bool = False) -> None:
-        path = directory / f'{variable}_{NAME_TAIL}'
+    def spatial(variable: str, missing: bool = False, key: str | None = None,
+                subdir: str | None = None) -> None:
+        parent = directory if subdir is None else directory / subdir
+        parent.mkdir(exist_ok=True)
+        path = parent / f'{variable}_{NAME_TAIL}'
         random = f'-random,{source_gdf}'
         # CDO's `random` draws from [0,1), so blanking 0.4-0.6 leaves a genuine
         # partial mask -- some missing values, not all of them.
@@ -71,7 +74,7 @@ def fixture_files(tmp_path_factory) -> dict[str, Path]:
         if missing:
             steps.append('-setrtomiss,0.4,0.6')
         _cdo('-f', 'nc4', *steps, random, str(path))
-        files[variable] = path
+        files[key or variable] = path
 
     # A state variable and a flux variable: both resolve to conservative
     # remapping, and both are mandatory in the data request.
@@ -82,6 +85,10 @@ def fixture_files(tmp_path_factory) -> dict[str, Path]:
     spatial('xvelsurf')
     # The same, but with a real mask, which must not go through the cache.
     spatial('yvelsurf', missing=True)
+    # A fill-allowed variable that does have missing values, so that the
+    # filling itself can be checked against real CDO rather than inferred
+    # from the command that was built.
+    spatial('lithk', missing=True, key='lithk_with_missing', subdir='masked')
     files['lim'] = _write_scalar(directory / f'lim_{NAME_TAIL}')
     return files
 

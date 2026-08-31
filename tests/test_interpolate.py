@@ -365,3 +365,49 @@ def test_a_scalar_file_is_never_handed_to_cdo(fixture_files, tmp_path,
                               weights_dir=weights_dir)
     assert result.reason == NO_SPATIAL_GRID
     assert out.is_symlink()
+
+
+@pytest.mark.cdo
+def test_missing_values_are_really_filled_for_a_fill_allowed_variable(
+        fixture_files, tmp_path, weights_dir):
+    """The setmisstoc,0 is observable in the output, so check it there.
+
+    `lithk` may be filled: "no ice" is legitimately zero thickness. Its
+    missing values must therefore be gone from the regridded file, not
+    spread into its neighbours as missing.
+    """
+    import netCDF4
+    import numpy as np
+
+    source = fixture_files['lithk_with_missing']
+    with netCDF4.Dataset(source) as dataset:
+        masked = np.ma.count_masked(dataset['lithk'][:])
+    assert masked > 0, 'the fixture is supposed to have missing values'
+
+    out = tmp_path / 'lithk_out.nc'
+    interpolate_file(source, out, 'GrIS', TARGET_RES, weights_dir=weights_dir)
+    with netCDF4.Dataset(out) as dataset:
+        values = dataset['lithk'][:]
+    assert np.ma.count_masked(values) == 0
+    assert values.min() == 0.0
+
+
+@pytest.mark.cdo
+def test_the_mask_is_really_preserved_for_a_mask_variable(fixture_files,
+                                                          tmp_path,
+                                                          weights_dir):
+    """`yvelsurf` must keep its missing values: zero is not a velocity.
+
+    The counterpart of the test above, and the distinction that matters most
+    in the whole package -- so it is checked in the output rather than in the
+    command that produced it.
+    """
+    import netCDF4
+    import numpy as np
+
+    out = tmp_path / 'yvelsurf_out.nc'
+    interpolate_file(fixture_files['yvelsurf'], out, 'GrIS', TARGET_RES,
+                     weights_dir=weights_dir)
+    with netCDF4.Dataset(out) as dataset:
+        values = dataset['yvelsurf'][:]
+    assert np.ma.count_masked(values) > 0
