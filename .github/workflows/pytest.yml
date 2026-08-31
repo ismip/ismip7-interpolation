@@ -1,0 +1,78 @@
+name: Pytest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} / ${{ matrix.versions }} versions
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        versions: [latest, floor]
+        include:
+          # the ranges in ismip7_interp_env.yml, solved fresh
+          - versions: latest
+            environment-file: ismip7_interp_env.yml
+          # every floor in ismip7_interp_env.yml pinned exactly
+          - versions: floor
+            environment-file: ci/ismip7_interp_env_floor.yml
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up micromamba environment
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-file: ${{ matrix.environment-file }}
+          environment-name: ismip7-interp
+          # Caching a solved environment would hide the day a new release
+          # breaks the open end of a range, so only the floor -- which is
+          # pinned, and so cannot drift -- is cached.
+          cache-environment: ${{ matrix.versions == 'floor' }}
+          cache-downloads: true
+          init-shell: >-
+            bash
+
+      - name: Install ismip7-interpolation
+        shell: micromamba-shell {0}
+        # The same flags the docs give developers, so CI exercises the
+        # documented install rather than a different one.
+        run: python -m pip install --no-deps --no-build-isolation .
+
+      - name: Report the installed versions
+        shell: micromamba-shell {0}
+        run: micromamba list
+
+      - name: Check the entry points
+        shell: micromamba-shell {0}
+        working-directory: ${{ runner.temp }}
+        run: |
+          ismip7-interpolate --version
+          ismip7-process-experiment --version
+          ismip7-run-all --version
+          ismip7-inventory --version
+          python -m ismip7_interp --help
+
+      - name: Confirm CDO is present
+        shell: micromamba-shell {0}
+        # The tests marked `cdo` skip themselves when CDO is missing, which is
+        # right for a contributor without it and wrong here: CI would then
+        # pass having exercised none of the actual remapping. Failing here
+        # keeps that from being silent.
+        run: |
+          which cdo
+          cdo --version
+
+      - name: Run test suite
+        shell: micromamba-shell {0}
+        # Run from outside the checkout so the tests import the installed
+        # package: a data file or entry point that did not make it into the
+        # wheel then fails here instead of passing against the source tree.
+        working-directory: ${{ runner.temp }}
+        run: pytest -v "$GITHUB_WORKSPACE/tests"
