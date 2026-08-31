@@ -1,6 +1,13 @@
+__pycache__
+.pytest_cache
+build/
+dist/
+*.egg-info/
+*.whl
+.venv/
+docs/_build/
 output/
-tests/fixtures/data/
+inventory/
 .DS_Store
 .claude/
 CLAUDE.md
-schematic/
