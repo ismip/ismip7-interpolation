@@ -162,7 +162,7 @@ def test_status_unknown_grid(tmp_path, write_gridded):
 
 
 def test_unknown_grid_wins_over_needs_regrid(tmp_path, write_gridded):
-    """One unrecognised file makes the whole experiment worth looking at."""
+    """One unrecognized file makes the whole experiment worth looking at."""
     root = tmp_path / 'archive'
     experiment = root / 'G/M/CORE/C001'
     experiment.mkdir(parents=True)

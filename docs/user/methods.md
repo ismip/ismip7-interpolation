@@ -18,7 +18,7 @@ token — and that name decides everything on this page.
    | Configured as | CDO operator | Applies to |
    |---|---|---|
    | bilinear | `remapbil` | the vector velocity components |
-   | nearest-neighbour | `remapnn` | nothing yet — see below |
+   | nearest-neighbor | `remapnn` | nothing yet — see below |
    | conservative (default) | `remapycon` | everything else |
 
 3. **Is the file already at the target resolution?** Then it is placed
@@ -44,7 +44,7 @@ interpolates rather than integrates.
 The list is in `ismip7_interp/data/config/bilinear_variables.txt`, one name
 per line, with the reasoning in the file's own comments.
 
-## Nearest-neighbour
+## Nearest-neighbor
 
 `remapnn` is the right choice for categorical or mask-like fields, where
 averaging would blur a sharp boundary into fractional values instead of
@@ -69,8 +69,8 @@ per file, and often per timestep.
 Filling is right where 0 is a physically meaningful value outside the ice
 sheet: ice thickness is legitimately 0 where there is no ice. It is wrong
 where it is not — an ice velocity of 0 m/s outside the ice sheet is not a
-measurement, and averaging it into neighbouring cells drags real velocities
-towards zero.
+measurement, and averaging it into neighboring cells drags real velocities
+toward zero.
 
 `ismip7_interp/data/config/mask_missing_variables.txt` lists the variables
 that keep their real missing-value pattern instead. Such a file does not use

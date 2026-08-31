@@ -44,7 +44,7 @@ docs, and cut a release.
 Given an archive of ISMIP7 submissions, the tools:
 
 - **choose a remapping per variable** — conservative by default, bilinear for
-  vector velocity components, nearest-neighbour where configured, and none at
+  vector velocity components, nearest-neighbor where configured, and none at
   all for the domain-integrated time series that have no spatial grid;
 - **cache remap weights** per grid pair and method, so that the expensive part
   of conservative remapping is done once for a whole archive rather than once

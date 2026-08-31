@@ -24,7 +24,7 @@ compiled program and is not on PyPI.
 ```bash
 # Look at an archive without touching it: sizes, predicted post-regrid sizes,
 # mandatory-variable completeness, and which experiments are on a grid we
-# don't recognise. Reads headers only, never data.
+# don't recognize. Reads headers only, never data.
 ismip7-inventory --domain GrIS --target-res 4000 \
     --experiments-root /path/to/archive --output ./inventory
 
@@ -77,7 +77,7 @@ drift from the grids the compliance checker validates *against*. See
 
 What *is* configured here is the regridding policy, in
 `ismip7_interp/data/config/` — which variables need bilinear or
-nearest-neighbour remapping, whose missing-value mask must be preserved, and
+nearest-neighbor remapping, whose missing-value mask must be preserved, and
 which experiment sets are open.
 
 ## Developing

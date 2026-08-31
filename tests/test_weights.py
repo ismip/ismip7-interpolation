@@ -39,7 +39,7 @@ def test_weight_file_path_distinguishes_method(tmp_path):
     assert len(paths) == 3
 
 
-def test_default_weights_dir_honours_the_environment(monkeypatch, tmp_path):
+def test_default_weights_dir_honors_the_environment(monkeypatch, tmp_path):
     monkeypatch.setenv(WEIGHTS_DIR_ENV, str(tmp_path / 'elsewhere'))
     assert default_weights_dir() == tmp_path / 'elsewhere'
 

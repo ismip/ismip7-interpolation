@@ -108,7 +108,7 @@ def bilinear_variables() -> frozenset[str]:
 
 @lru_cache(maxsize=None)
 def nearest_variables() -> frozenset[str]:
-    """Return the variables remapped by nearest neighbour."""
+    """Return the variables remapped by nearest neighbor."""
     return frozenset(read_name_list(config_dir() / 'nearest_variables.txt'))
 
 

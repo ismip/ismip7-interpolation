@@ -31,7 +31,7 @@ GrIS and then AIS does not overwrite the first scan with the second.
 : Every spatial file already matches `--target-res`.
 
 `needs_regrid`
-: At least one spatial file is at a different, recognised ISMIP7 resolution.
+: At least one spatial file is at a different, recognized ISMIP7 resolution.
 
 `unknown_grid`
 : At least one spatial file is on a grid that matches no ISMIP7 grid for this

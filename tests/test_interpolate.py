@@ -160,7 +160,7 @@ def test_a_file_already_at_the_target_is_placed_unchanged(tmp_path, fake_cdo,
     ('copy', 'copy'),
     ('skip', 'skip'),
 ])
-def test_on_unchanged_is_honoured(tmp_path, fake_cdo, fake_source,
+def test_on_unchanged_is_honored(tmp_path, fake_cdo, fake_source,
                                   on_unchanged, expected):
     source = fake_source('lithk')
     result = interpolate_file(source, tmp_path / 'out.nc', 'GrIS', SOURCE_RES,
@@ -276,7 +276,7 @@ def test_a_non_scalar_file_with_no_grid_is_reported(tmp_path, fake_cdo,
                          weights_dir=tmp_path / 'weights')
 
 
-def test_an_unrecognised_source_grid_is_reported(tmp_path, fake_cdo,
+def test_an_unrecognized_source_grid_is_reported(tmp_path, fake_cdo,
                                                  fake_source):
     """A source grid is never guessed at."""
     source = fake_source('lithk', dims=(37, 41))
@@ -374,7 +374,7 @@ def test_missing_values_are_really_filled_for_a_fill_allowed_variable(
 
     `lithk` may be filled: "no ice" is legitimately zero thickness. Its
     missing values must therefore be gone from the regridded file, not
-    spread into its neighbours as missing.
+    spread into its neighbors as missing.
     """
     import netCDF4
     import numpy as np

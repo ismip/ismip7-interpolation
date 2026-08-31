@@ -24,7 +24,7 @@ one.
 
 ```{important}
 A change to which remapping a variable gets changes the *numbers* in every
-file regridded afterwards. Say so plainly in the release notes: someone may
+file regridded afterward. Say so plainly in the release notes: someone may
 have results from the previous version and needs to know they are not
 comparable.
 ```

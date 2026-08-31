@@ -188,7 +188,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         '--method', choices=METHOD_CHOICES, default='auto',
         help='the remapping to use; the default picks conservative remapping '
              'unless the variable is configured for bilinear or '
-             'nearest-neighbour')
+             'nearest-neighbor')
     cli.add_on_unchanged_argument(parser)
     cli.add_weights_argument(parser)
     parser.add_argument('in_file', type=Path, metavar='IN.nc',

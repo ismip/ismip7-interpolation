@@ -11,14 +11,14 @@ the grids would be invisible -- the checker would validate submissions against
 a revised grid while this tool went on regridding onto the old one.
 
 What *is* this package's own is the regridding policy in ``data/config/``:
-which variables need bilinear or nearest-neighbour remapping rather than
+which variables need bilinear or nearest-neighbor remapping rather than
 conservative, whose missing-value mask must be preserved, and which experiment
 sets are open.  None of that is part of the data request, and none of it
 belongs to the checker.
 
 ``importlib.resources`` hands back a ``Traversable``, which need not be a real
 file on disk.  CDO is a subprocess and can only be given a filesystem path, so
-each directory is materialised once, on first use, and kept for the life of the
+each directory is materialized once, on first use, and kept for the life of the
 process.
 """
 
@@ -42,7 +42,7 @@ class MissingDataError(RuntimeError):
 
 
 @lru_cache(maxsize=None)
-def _materialise(package: str) -> Path:
+def _materialize(package: str) -> Path:
     """Return the on-disk path of a data package's directory."""
     try:
         traversable = resources.files(package)
@@ -60,12 +60,12 @@ def _materialise(package: str) -> Path:
 
 def config_dir() -> Path:
     """Return the directory holding this package's regridding policy."""
-    return _materialise(DATA_PACKAGE) / 'config'
+    return _materialize(DATA_PACKAGE) / 'config'
 
 
 def gdf_dir() -> Path:
     """Return the directory holding the ISMIP7 grid description files."""
-    directory = _materialise(ISSCHECKER_DATA_PACKAGE) / 'gdfs'
+    directory = _materialize(ISSCHECKER_DATA_PACKAGE) / 'gdfs'
     if not directory.is_dir():  # pragma: no cover - install error
         raise MissingDataError(
             f'isschecker is installed but ships no grid definitions at '
@@ -75,7 +75,7 @@ def gdf_dir() -> Path:
 
 def variable_request_path() -> Path:
     """Return the path of the ISMIP7 variable request."""
-    path = (_materialise(ISSCHECKER_DATA_PACKAGE)
+    path = (_materialize(ISSCHECKER_DATA_PACKAGE)
             / 'ISMIP7_variable_request.csv')
     if not path.is_file():  # pragma: no cover - install error
         raise MissingDataError(

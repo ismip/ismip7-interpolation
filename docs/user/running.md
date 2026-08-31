@@ -86,7 +86,7 @@ A directory is processed when all of these hold:
   other.
 
 `--target-res METERS`
-: The ISMIP7 target resolution, in metres. Required. A resolution with no
+: The ISMIP7 target resolution, in meters. Required. A resolution with no
   ISMIP7 grid is an error that lists the ones that exist.
 
 `--experiments-root ROOT`
