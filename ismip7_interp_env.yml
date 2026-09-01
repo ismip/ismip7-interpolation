@@ -1,0 +1,48 @@
+# Development environment: everything needed to work on the package -- its
+# dependencies, the test suite's, and the documentation build's -- but not the
+# package itself, which is then pip-installed from a source checkout (see
+# "Installing from source" in the developer guide).  To *use* the tools,
+# install from conda-forge instead -- `conda create -n ismip7-interp -c
+# conda-forge ismip7-interpolation` -- which brings the runtime packages with
+# it.
+name: ismip7-interp
+channels:
+  - conda-forge
+  # Never let a user's `defaults` channel leak into the solve: it would give
+  # different builds on different machines.
+  - nodefaults
+
+dependencies:
+# Interpreter and build tools
+  - python >=3.11,<3.15
+  - pip >=24
+  # setuptools is required by `pip install --no-build-isolation` (conda-forge
+  # python no longer vendors it); >=77 for PEP 639 license metadata
+  - setuptools >=77
+
+# The regridding engine.  Every remapping this package performs is a CDO
+# command; there is no Python fallback, and nothing works without it.
+  - cdo >=2.2
+
+# Reading NetCDF headers for the inventory, which must not read the data
+  - netcdf4 >=1.7,<2
+
+# The ISMIP7 grid definitions and data request.  Both are maintained in
+# ISM_SimulationChecker and read out of that package rather than copied into
+# this one: a copy is a thing that can drift, and earlier copies of both
+# silently did.
+  - isschecker >=0.2,<1
+
+# Testing
+  - pytest >=8
+
+# Documentation
+  # The docs build needs none of the packages above -- it documents the
+  # command-line interface and takes the version from pyproject.toml -- but a
+  # developer environment should be able to build them.  CI uses the smaller
+  # ci/docs_env.yml instead; keep the two in step.
+  - sphinx >=8
+  - myst-parser >=4
+  - furo
+  - sphinx-copybutton
+  - sphinx-design

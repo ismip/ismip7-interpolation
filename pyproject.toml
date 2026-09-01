@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ismip7-interpolation"
+version = "0.1.0"
+description = "Regrid ISMIP7 ice sheet model output onto the standard ISMIP7 grids"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "Heiko Goelzer", email = "heig@norceresearch.no" }]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
+# These must stay in sync with ismip7_interp_env.yml.  The supported install
+# path is `pip install --no-deps --no-build-isolation .` into the conda
+# environment, so pip never resolves these; they are here so the metadata is
+# honest about what the package needs.
+#
+# CDO is the regridding engine and is not installable from PyPI, so it cannot
+# appear here at all -- it is a dependency of the conda-forge package and of
+# ismip7_interp_env.yml, and the code reports its absence rather than assuming
+# it.
+#
+# isschecker is a data dependency, not a code one: the ISMIP7 grid definitions
+# and data request are read out of it rather than copied into this package.
+dependencies = [
+    "netCDF4>=1.7,<2",
+    "isschecker>=0.2,<1",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+# The docs build needs none of the dependencies above -- it documents the
+# command-line interface rather than importing the package -- so this extra
+# stands alone.  It must stay in sync with the documentation section of
+# ismip7_interp_env.yml and with ci/docs_env.yml.
+docs = [
+    "sphinx>=8",
+    "myst-parser>=4",
+    "furo",
+    "sphinx-copybutton",
+    "sphinx-design",
+]
+
+[project.urls]
+Homepage = "https://github.com/ismip/ismip7-interpolation"
+Documentation = "https://ismip.github.io/ismip7-interpolation/"
+Issues = "https://github.com/ismip/ismip7-interpolation/issues"
+
+[project.scripts]
+ismip7-interpolate = "ismip7_interp.interpolate:main"
+ismip7-process-experiment = "ismip7_interp.experiment:main"
+ismip7-run-all = "ismip7_interp.run_all:main"
+ismip7-inventory = "ismip7_interp.inventory:main"
+
+[tool.setuptools]
+packages = ["ismip7_interp", "ismip7_interp.data"]
+
+[tool.setuptools.package-data]
+"ismip7_interp.data" = ["config/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "cdo: needs a working CDO installation and exercises the real regridding",
+]

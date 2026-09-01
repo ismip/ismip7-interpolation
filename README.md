@@ -1,161 +1,96 @@
 # ismip7-interpolation
 
-Regrids ISMIP7 ice sheet model output (Greenland/GrIS and
-Antarctica/AIS) onto the standard ISMIP7 target grids using CDO.
-Picks conservative, bilinear, or nearest-neighbor remapping per
-variable automatically, reuses a cached set of remap weights per grid
-pair instead of recomputing them for every file, and symlinks (by
-default) files already at the target resolution instead of
-regridding them. 
+Regrid ISMIP7 ice sheet model output — Greenland (GrIS) and Antarctica (AIS) —
+onto the standard ISMIP7 target grids, so that submissions from models on
+different native grids can be compared with one another.
+[CDO](https://mpimet.mpg.de/cdo) does the remapping; this package decides what
+to remap, how, and where to put it.
 
-**Terminology**: an **experiment** is one archive directory —
-`<group>/<model>/<experiment-set>/<experiment>`, e.g.
-`NORCE/CISM/CORE/C007` — holding the `.nc` files for one run. A
-**submission** is all experiments from one group with one specific
-model (e.g. everything under `NORCE/CISM`, which may include multiple
-experiment sets/numbers). The tooling here operates per-experiment,
-flattened across the whole archive.
+**Documentation: <https://ismip.github.io/ismip7-interpolation/>**
 
-## Usage
-
-All scripts live in `scripts/` and share config in `config/` and grid
-definitions in `gdfs/`. They're self-contained bash + CDO
-Run them from the repo root:
+## Install
 
 ```bash
-ssh nird
-cd /path/to/ismip7-interpolation
-scripts/run_all_experiments.sh --domain GrIS --target-res 4000
+conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+conda activate ismip7-interp
 ```
 
-`cdo` is expected on `PATH`; on NIRD, `scripts/lib/common.sh` runs
-`conda activate nc` automatically if `cdo` isn't already available.
-On another server, either activate an environment with `cdo` before
-running the scripts, or adjust `ensure_cdo()` in
-`scripts/lib/common.sh` for that server's setup.
+That brings CDO with it, which is what actually performs every remapping.
+`pip install` gives you the Python code with nothing to run it — CDO is a
+compiled program and is not on PyPI.
+
+## Use
 
 ```bash
-# Regrid a single file
-scripts/interpolate_variable.sh --domain GrIS|AIS --target-res METERS \
-    [--method ycon|bil|nn|auto] [--on-unchanged symlink|copy|skip] IN.nc OUT.nc
+# Look at an archive without touching it: sizes, predicted post-regrid sizes,
+# mandatory-variable completeness, and which experiments are on a grid we
+# don't recognize. Reads headers only, never data.
+ismip7-inventory --domain GrIS --target-res 4000 \
+    --experiments-root /path/to/archive --output ./inventory
 
-# Regrid every file in one experiment directory
-scripts/process_experiment.sh --domain GrIS|AIS --target-res METERS \
-    [--on-unchanged symlink|copy|skip] [--variables VAR1,VAR2,...] \
+# Regrid every experiment under an archive root
+ismip7-run-all --domain GrIS --target-res 4000 \
+    --experiments-root /path/to/archive --output-root ./output
+
+# Regrid one experiment directory
+ismip7-process-experiment --domain GrIS --target-res 4000 \
     EXPERIMENT_DIR OUTPUT_ROOT
 
-# Regrid every experiment found under an archive root
-scripts/run_all_experiments.sh --domain GrIS|AIS --target-res METERS \
-    [--experiments-root ROOT] [--output-root DIR] \
-    [--on-unchanged symlink|copy|skip] [--min-pass-pct PCT] \
-    [--variables VAR1,VAR2,...]
-
-# Read-only inventory report (sizes, predicted post-regrid sizes,
-# mandatory-variable completeness, regrid-need summary) -- never
-# regrids anything; much faster than the regrid scripts (ncdump-based
-# grid detection, not cdo -- see Architecture in CLAUDE.md)
-scripts/inventory_archive.sh --domain GrIS|AIS --target-res METERS \
-    [--experiments-root ROOT] [--output DIR] [--variables VAR1,VAR2,...]
+# Regrid one file
+ismip7-interpolate --domain GrIS --target-res 4000 IN.nc OUT.nc
 ```
 
-**Processing only specific variables**: `--variables lithk,acabf` (comma-separated,
-matched against the first `_`-separated token of each filename)
-restricts `process_experiment.sh`/`run_all_experiments.sh`/
-`inventory_archive.sh` to just those variables, across every
-experiment. An experiment missing a requested variable isn't an
-error — it's logged and skipped. On `inventory_archive.sh` this also
-skips the (relatively expensive) grid-detection step for every
-non-matching file, so a filtered scan is noticeably faster than a full
-one, not just a smaller report.
+Each is also `python -m ismip7_interp <command>`. Run any of them with
+`--help`.
 
-**Archive path**: `--experiments-root` points at the archive to scan.
-It defaults per `--domain` to the known archive root (both GrIS and
-AIS are confirmed); pass `--experiments-root` explicitly to point at
-anything else instead (a test copy, a different mount). To change a
-default itself, edit it in `scripts/run_all_experiments.sh` and
-`scripts/inventory_archive.sh`.
+## What it does
 
-**Files that aren't actually regridded** (a scalar variable with no
-spatial grid, or a file already at the target resolution) are placed
-at the output path per `--on-unchanged`, default `symlink` — an
-absolute symlink back to the source file, avoiding a full copy of
-data that isn't changing. Pass `--on-unchanged copy` for a real copy,
-or `--on-unchanged skip` to write nothing for that file at all.
+- **Chooses a remapping per variable** — conservative (`remapycon`) by
+  default, bilinear (`remapbil`) for vector velocity components, and none at
+  all for the domain-integrated time series that have no spatial grid.
+- **Caches remap weights** per grid pair and method, so the expensive part of
+  conservative remapping happens once for a whole archive rather than once per
+  file.
+- **Leaves alone what does not need changing** — a file already at the target
+  resolution, or one with no grid, is symlinked rather than copied.
+- **Reports rather than guesses** — a source grid matching no ISMIP7 grid is an
+  error, never an assumption.
+- **Keeps going** — a failing experiment in a real archive is logged and
+  stepped over; the run fails only below `--min-pass-pct`.
 
-**Remap weights are cached** under `weights/` (gitignored, empty on
-checkout, populated automatically the first time each
-domain/source-resolution/target-resolution/method combination is
-regridded). This is a large speedup on a real archive — regridding a
-file no longer recomputes conservative-remap weights from scratch
-every time — and requires no action from you; missing weight files
-are generated on demand from the grid definitions alone, never from
-archive data. Before caching, missing source cells are filled with
-`cdo setmisstoc,0` so the weights don't depend on which cells happen
-to be missing in a given file — safe for most variables (e.g. ice
-thickness, where "no ice" is legitimately 0), but wrong for a few
-(e.g. ice velocity, where 0 isn't a meaningful fill value outside the
-ice sheet). `config/mask_missing_variables.txt` lists the variables
-that keep their real missing-value pattern instead; add a variable
-there if regridding it needs the same treatment.
-
-**Partial failures are expected**, not fatal: real experiments vary
-in quality, and `run_all_experiments.sh` logs a failed experiment and
-moves on rather than aborting the whole run. It only exits non-zero
-if the overall pass rate drops below `--min-pass-pct` (default 60).
-
-Output is only ever written under the writable NIRD working directory
-(`/nird/datapeak/NS5011K/users/heig/RemoteTesting/ismip7-interpolation`)
-— the archive itself is read-only.
-
-## Expected archive structure
+Output mirrors the archive under one `<DOMAIN>_<res>m` directory, with
+filenames unchanged and timestamped logs alongside:
 
 ```
-<root>/<group>/<model>/<experiment-set>/<experiment>/*.nc
+OUTPUT_ROOT/GrIS_04000m/<group>/<model>/<experiment-set>/<experiment>/*.nc
+OUTPUT_ROOT/GrIS_04000m/logs/
 ```
 
-e.g. `NORCE/CISM/CORE/C007/acabf_GrIS_NORCE_CISM3_m001_CESM2-WACCM_f001_ssp585_C007_2015-2300.nc`.
+## Grids and the data request come from isschecker
 
-- `<experiment-set>` and the allowed `<experiment>` number range are
-  configured in `config/experiment_sets.txt` (currently only `CORE`,
-  numbers `C001`-`C011`). A directory must match this *exactly* to be
-  picked up — variants like `old_CORE`, `CORE_old`, or an experiment
-  number out of range are skipped, along with any directory that has
-  no `.nc` files directly inside it.
-- Filenames follow the ISMIP7 convention:
-  `{var}_{region}_{project}_{submission}_{modelid}_{ESM}_{forcingid}_{experiment}_{configid}_{startyear}-{endyear}.nc`
-  (no resolution token).
+The ISMIP7 grid definitions and the data request are maintained in
+[ISM_SimulationChecker](https://github.com/ismip/ISM_SimulationChecker) and
+read out of the `isschecker` package at runtime rather than copied into this
+one. That is deliberate: it means the grids this tool regrids *onto* cannot
+drift from the grids the compliance checker validates *against*. See
+[Where the grids and the data request come from](https://ismip.github.io/ismip7-interpolation/user/data-sources.html).
 
-## Output structure
+What *is* configured here is the regridding policy, in
+`ismip7_interp/data/config/` — which variables need bilinear or
+nearest-neighbor remapping, whose missing-value mask must be preserved, and
+which experiment sets are open.
 
+## Developing
+
+```bash
+conda env create -f ismip7_interp_env.yml
+conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation -e .
+pytest -v tests
 ```
-OUTPUT_ROOT/<DOMAIN>_<res>m/<group>/<model>/<experiment-set>/<experiment>/*.nc
-OUTPUT_ROOT/<DOMAIN>_<res>m/logs/
-```
 
-e.g. `OUTPUT_ROOT/GrIS_04000m/NORCE/CISM/CORE/C007/acabf_..._2015-2300.nc`.
-The group/model/experiment-set/experiment directory names and the
-filenames are identical to the source archive — only the top-level
-`<DOMAIN>_<res>m` directory is added, carrying the resolution instead
-of the filename.
+See the [developer guide](https://ismip.github.io/ismip7-interpolation/dev/index.html).
 
-`logs/`, alongside the group directories, holds a timestamped log per
-experiment processed (from `process_experiment.sh`, whether run
-directly or via `run_all_experiments.sh`) plus one consolidated
-timestamped run log per `run_all_experiments.sh` invocation. Each log
-records what was processed, the `--on-unchanged`/target-resolution
-settings used, and the scripts' git commit at run time (once this
-repo is on git — until then it records that explicitly rather than
-guessing).
+## License
 
-## Inventory output
-
-`inventory_archive.sh` writes `DIR/files.csv` (one row per file),
-`DIR/experiments.csv` (one row per experiment, including a
-`regrid_status` of `already_at_target` / `needs_regrid` /
-`unknown_grid` / `no_spatial_data`), and `DIR/summary.txt` (aggregate
-counts across the scan) — `DIR` defaults to
-`<repo>/output/inventory_<domain>` (e.g. `output/inventory_GrIS`), so
-scanning both domains without `--output` never overwrites either
-scan. On the real GrIS archive (44 experiments) a full scan takes
-~1-2 minutes; restricting to one variable with `--variables` cuts
-that to a few seconds.
+MIT — see [LICENSE](LICENSE).
