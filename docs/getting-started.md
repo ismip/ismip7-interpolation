@@ -3,13 +3,17 @@
 ## Install
 
 ```bash
-conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
+conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation .
 ismip7-interpolate --version
 ```
 
-This brings CDO with it, which does every remapping. {doc}`dev/source-install`
-covers working on the package instead.
+The conda environment brings CDO with it, which does every remapping. See
+{doc}`user/installation` for why the pip flags matter, and
+{doc}`dev/source-install` if you mean to work on the package.
 
 ## Lay out your files
 

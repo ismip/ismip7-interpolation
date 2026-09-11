@@ -1,16 +1,33 @@
 # Installation
 
+From a checkout of the repository:
+
 ```bash
-conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
+conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation .
 ismip7-interpolate --version
 cdo --version
 ```
 
-This is the supported way to install, and the only one that gets you a
-working CDO. CDO does every remapping; it is a compiled program, not on PyPI,
-so `pip install ismip7-interpolation` gives you Python code with nothing to
-run it.
+The conda environment is the supported way to install, and the only one that
+gets you a working CDO. CDO does every remapping; it is a compiled program,
+not on PyPI, so a plain `pip install` of the package gives you Python code
+with nothing to run it.
+
+```{warning}
+**Use those pip flags.** All dependencies come from the conda environment,
+and a plain `pip install .` can silently replace them with PyPI wheels —
+`netCDF4` in particular bundles its own copy of the netCDF C library — which
+is exactly how two people end up with different results from the same files.
+`--no-deps` keeps pip from resolving anything, and `--no-build-isolation`
+builds with the environment's `setuptools` instead of downloading one from
+PyPI.
+```
+
+To update, `git pull` and run the `pip install` again.
 
 ## What comes with it
 
@@ -26,6 +43,7 @@ Either the environment is not active, or CDO was installed somewhere that is
 not on your PATH. The commands say so in as many words rather than failing
 obscurely.
 
-## Installing from source
+## Working on the package
 
-Only needed to work on the package itself; see {doc}`../dev/source-install`.
+{doc}`../dev/source-install` covers the editable install and the dependency
+ranges.

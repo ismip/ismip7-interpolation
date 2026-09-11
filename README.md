@@ -10,12 +10,17 @@ package decides what to remap, how, and where to put it.
 ## Install
 
 ```bash
-conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
+conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation .
 ```
 
-This brings CDO with it. `pip install` does not: CDO is a compiled program
-and is not on PyPI.
+The conda environment brings CDO with it; a plain `pip install` of the
+package would not, because CDO is a compiled program and is not on PyPI. Keep
+the two pip flags: they stop pip from replacing the conda packages with PyPI
+wheels. To update, `git pull` and run the `pip install` again.
 
 ## Use
 
@@ -91,9 +96,9 @@ this package's own configuration, in ismip7_interp/data/config. See
 
 ## Developing
 
+Install as above but with `-e` for an editable install, then run the tests:
+
 ```bash
-conda env create -f ismip7_interp_env.yml
-conda activate ismip7-interp
 python -m pip install --no-deps --no-build-isolation -e .
 pytest -v tests
 ```

@@ -1,10 +1,7 @@
-# Development environment: everything needed to work on the package -- its
-# dependencies, the test suite's, and the documentation build's -- but not the
-# package itself, which is then pip-installed from a source checkout (see
-# "Installing from source" in the developer guide).  To *use* the tools,
-# install from conda-forge instead -- `conda create -n ismip7-interp -c
-# conda-forge ismip7-interpolation` -- which brings the runtime packages with
-# it.
+# The conda environment for using and for working on the package: its
+# dependencies -- CDO among them -- plus the test suite's and the documentation
+# build's, but not the package itself, which is then pip-installed from a
+# source checkout (see "Installation" in the user guide).
 name: ismip7-interp
 channels:
   - conda-forge

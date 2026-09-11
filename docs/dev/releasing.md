@@ -5,6 +5,13 @@ This page is for maintainers — those with write access to
 are contributing from a fork, nothing here is yours to do; open the pull
 request and a maintainer will fold it into the next release.
 
+```{note}
+There is no conda-forge package yet. Until a feedstock exists, users install
+from a source checkout as described in {doc}`../user/installation`, and a
+release is just the tag. The rest of this page describes the process once the
+package is on conda-forge.
+```
+
 Modelers get the tools from conda-forge, and conda-forge builds from a tag.
 Anything on `main` that has not been tagged therefore does not exist as far as
 they are concerned: a remapping you changed, a variable you moved between

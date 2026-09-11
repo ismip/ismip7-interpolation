@@ -10,8 +10,11 @@ can be compared. [CDO](https://mpimet.mpg.de/cdo) does the remapping; this
 package decides what to remap, how, and where to put it.
 
 ```bash
-conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
+conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation .
 ismip7-run-all --domain GrIS --target-res 4000 \
     --experiments-root ISMIP7_submissions/GrIS --output-root output
 ```
@@ -62,10 +65,8 @@ the ones the checker validates against. See {doc}`user/data-sources`.
 ## Where things live
 
 Developed at
-[ismip/ismip7-interpolation](https://github.com/ismip/ismip7-interpolation)
-and released through
-[conda-forge](https://anaconda.org/conda-forge/ismip7-interpolation). Problems
-and questions go in
+[ismip/ismip7-interpolation](https://github.com/ismip/ismip7-interpolation).
+Problems and questions go in
 [the issue tracker](https://github.com/ismip/ismip7-interpolation/issues).
 
 ```{toctree}
