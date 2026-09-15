@@ -132,9 +132,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ismip7-run-all',
         description=__doc__,
-        epilog='Not every experiment in a real archive is expected to process '
-               'cleanly, so a failed one is logged and stepped over; the run '
-               'as a whole fails only below --min-pass-pct.')
+        epilog='A failing experiment is logged and skipped; the run as a '
+               'whole fails only if fewer than --min-pass-pct percent of '
+               'experiments succeed.')
     cli.add_common_arguments(parser)
     cli.add_grid_arguments(parser)
     cli.add_experiments_root_argument(parser)

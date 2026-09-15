@@ -179,16 +179,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ismip7-interpolate',
         description=__doc__,
-        epilog='A file with no spatial grid, or one already at the target '
-               'resolution, is not regridded; --on-unchanged says what to put '
-               'at OUT.nc instead.')
+        epilog='The variable name at the start of IN.nc decides the '
+               'remapping. A file with no spatial grid, or one already at '
+               'the target resolution, is not regridded; --on-unchanged '
+               'says what to put at OUT.nc instead.')
     cli.add_common_arguments(parser)
     cli.add_grid_arguments(parser)
     parser.add_argument(
         '--method', choices=METHOD_CHOICES, default='auto',
-        help='the remapping to use; the default picks conservative remapping '
-             'unless the variable is configured for bilinear or '
-             'nearest-neighbor')
+        help='conservative (ycon), bilinear (bil) or nearest-neighbor (nn) '
+             'remapping; auto (default) picks by variable, conservative '
+             'unless the variable is configured otherwise')
     cli.add_on_unchanged_argument(parser)
     cli.add_weights_argument(parser)
     parser.add_argument('in_file', type=Path, metavar='IN.nc',

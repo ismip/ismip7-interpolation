@@ -2,7 +2,7 @@
 
 Guidance for contributing to the package and for maintaining its releases. If
 you only want to regrid ISMIP7 output, you do not need any of this — install
-from conda-forge as described in {doc}`../getting-started`.
+as described in {doc}`../getting-started`.
 
 The repository is laid out like this:
 

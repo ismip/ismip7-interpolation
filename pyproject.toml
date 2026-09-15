@@ -22,9 +22,8 @@ classifiers = [
 # honest about what the package needs.
 #
 # CDO is the regridding engine and is not installable from PyPI, so it cannot
-# appear here at all -- it is a dependency of the conda-forge package and of
-# ismip7_interp_env.yml, and the code reports its absence rather than assuming
-# it.
+# appear here at all -- it is a dependency of ismip7_interp_env.yml, and the
+# code reports its absence rather than assuming it.
 #
 # isschecker is a data dependency, not a code one: the ISMIP7 grid definitions
 # and data request are read out of it rather than copied into this package.

@@ -1,90 +1,104 @@
 # ismip7-interpolation
 
-Regrid ISMIP7 ice sheet model output — Greenland (GrIS) and Antarctica (AIS) —
-onto the standard ISMIP7 target grids, so that submissions from models on
-different native grids can be compared with one another.
-[CDO](https://mpimet.mpg.de/cdo) does the remapping; this package decides what
-to remap, how, and where to put it.
+Regrids ISMIP7 ice sheet model output, for Greenland (GrIS) and Antarctica
+(AIS), onto the standard ISMIP7 grids so that models on different native grids
+can be compared. [CDO](https://mpimet.mpg.de/cdo) does the remapping; this
+package decides what to remap, how, and where to put it.
 
 **Documentation: <https://ismip.github.io/ismip7-interpolation/>**
 
 ## Install
 
 ```bash
-conda create -n ismip7-interp -c conda-forge ismip7-interpolation
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
+conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
+python -m pip install --no-deps --no-build-isolation .
 ```
 
-That brings CDO with it, which is what actually performs every remapping.
-`pip install` gives you the Python code with nothing to run it — CDO is a
-compiled program and is not on PyPI.
+The conda environment brings CDO with it; a plain `pip install` of the
+package would not, because CDO is a compiled program and is not on PyPI. Keep
+the two pip flags: they stop pip from replacing the conda packages with PyPI
+wheels. To update, `git pull` and run the `pip install` again.
 
 ## Use
 
+The tools read an ISMIP7 archive, laid out as a submission is. The archive
+root is the ice sheet directory, the one holding a folder per group:
+
+```
+ISMIP7_submissions/GrIS/       <-- --experiments-root
+├── NORCE/                     <-- group
+│   └── CISM3/                 <-- model
+│       └── CORE/              <-- experiment set
+│           ├── C001/          <-- experiment
+│           │   ├── lithk_GrIS_NORCE_CISM3_m001_CESM2-WACCM_f001_historical_C001_1850-2014.nc
+│           │   └── ...
+│           └── C007/
+└── AWI/
+    └── PISM/
+        └── CORE/
+            └── C007/
+```
+
 ```bash
-# Look at an archive without touching it: sizes, predicted post-regrid sizes,
-# mandatory-variable completeness, and which experiments are on a grid we
-# don't recognize. Reads headers only, never data.
+# See what is there before regridding any of it. Reads headers only.
 ismip7-inventory --domain GrIS --target-res 4000 \
-    --experiments-root /path/to/archive --output ./inventory
+    --experiments-root ISMIP7_submissions/GrIS --output inventory
 
-# Regrid every experiment under an archive root
+# Regrid every experiment in the archive
 ismip7-run-all --domain GrIS --target-res 4000 \
-    --experiments-root /path/to/archive --output-root ./output
+    --experiments-root ISMIP7_submissions/GrIS --output-root output
 
-# Regrid one experiment directory
+# Regrid one experiment
 ismip7-process-experiment --domain GrIS --target-res 4000 \
-    EXPERIMENT_DIR OUTPUT_ROOT
+    --experiments-root ISMIP7_submissions/GrIS \
+    ISMIP7_submissions/GrIS/NORCE/CISM3/CORE/C007 output
 
 # Regrid one file
 ismip7-interpolate --domain GrIS --target-res 4000 IN.nc OUT.nc
 ```
 
-Each is also `python -m ismip7_interp <command>`. Run any of them with
-`--help`.
+Output mirrors the archive under one directory named for the ice sheet and
+resolution. Filenames do not change:
+
+```
+output/GrIS_04000m/
+├── NORCE/CISM3/CORE/C001/lithk_GrIS_NORCE_CISM3_m001_CESM2-WACCM_f001_historical_C001_1850-2014.nc
+├── NORCE/CISM3/CORE/C007/...
+├── AWI/PISM/CORE/C007/...
+└── logs/
+```
+
+Each command is also `python -m ismip7_interp <command>`. Run any of them
+with `--help`.
 
 ## What it does
 
-- **Chooses a remapping per variable** — conservative (`remapycon`) by
-  default, bilinear (`remapbil`) for vector velocity components, and none at
-  all for the domain-integrated time series that have no spatial grid.
-- **Caches remap weights** per grid pair and method, so the expensive part of
-  conservative remapping happens once for a whole archive rather than once per
-  file.
-- **Leaves alone what does not need changing** — a file already at the target
-  resolution, or one with no grid, is symlinked rather than copied.
-- **Reports rather than guesses** — a source grid matching no ISMIP7 grid is an
-  error, never an assumption.
-- **Keeps going** — a failing experiment in a real archive is logged and
-  stepped over; the run fails only below `--min-pass-pct`.
+- Picks a remapping per variable: conservative by default, bilinear for
+  velocity components, and none for time series with no spatial grid.
+- Computes remap weights once per grid pair and reuses them across the
+  archive.
+- Symlinks rather than copies a file that needs no regridding.
+- Stops on a grid it does not recognize rather than guessing.
+- Logs a failing experiment and moves on. The run fails only if fewer than
+  `--min-pass-pct` percent of experiments succeed.
 
-Output mirrors the archive under one `<DOMAIN>_<res>m` directory, with
-filenames unchanged and timestamped logs alongside:
+## Where the grids come from
 
-```
-OUTPUT_ROOT/GrIS_04000m/<group>/<model>/<experiment-set>/<experiment>/*.nc
-OUTPUT_ROOT/GrIS_04000m/logs/
-```
-
-## Grids and the data request come from isschecker
-
-The ISMIP7 grid definitions and the data request are maintained in
-[ISM_SimulationChecker](https://github.com/ismip/ISM_SimulationChecker) and
-read out of the `isschecker` package at runtime rather than copied into this
-one. That is deliberate: it means the grids this tool regrids *onto* cannot
-drift from the grids the compliance checker validates *against*. See
+The ISMIP7 grid definitions and the data request are read from the
+[ISM_SimulationChecker](https://github.com/ismip/ISM_SimulationChecker)
+package, isschecker, so the grids this tool regrids onto cannot drift from the
+ones the checker validates against. Which variables get which remapping is
+this package's own configuration, in ismip7_interp/data/config. See
 [Where the grids and the data request come from](https://ismip.github.io/ismip7-interpolation/user/data-sources.html).
-
-What *is* configured here is the regridding policy, in
-`ismip7_interp/data/config/` — which variables need bilinear or
-nearest-neighbor remapping, whose missing-value mask must be preserved, and
-which experiment sets are open.
 
 ## Developing
 
+Install as above but with `-e` for an editable install, then run the tests:
+
 ```bash
-conda env create -f ismip7_interp_env.yml
-conda activate ismip7-interp
 python -m pip install --no-deps --no-build-isolation -e .
 pytest -v tests
 ```
@@ -93,4 +107,4 @@ See the [developer guide](https://ismip.github.io/ismip7-interpolation/dev/index
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

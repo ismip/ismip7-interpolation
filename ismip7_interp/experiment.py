@@ -150,17 +150,21 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ismip7-process-experiment',
         description=__doc__,
-        epilog='An experiment that has none of the requested --variables is '
-               'not an error: some variables are optional and legitimately '
-               'absent.')
+        epilog='Every .nc file directly inside EXPERIMENT_DIR is regridded. '
+               'The output mirrors its path below --experiments-root, or '
+               'without that, the last four components of its path '
+               '(group/model/set/experiment). An experiment with none of '
+               'the requested --variables is not an error: some variables '
+               'are optional.')
     cli.add_common_arguments(parser)
     cli.add_grid_arguments(parser)
-    cli.add_experiments_root_argument(parser)
+    cli.add_experiments_root_argument(parser, has_default=False)
     cli.add_on_unchanged_argument(parser)
     cli.add_variables_argument(parser)
     cli.add_weights_argument(parser)
     parser.add_argument('experiment_dir', type=Path, metavar='EXPERIMENT_DIR',
-                        help='the experiment directory to regrid')
+                        help='the experiment directory to regrid, e.g. '
+                             '.../GrIS/NORCE/CISM3/CORE/C007')
     parser.add_argument('output_root', type=Path, metavar='OUTPUT_ROOT',
                         help='where to write the regridded output tree')
     return parser.parse_args(argv)

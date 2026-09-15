@@ -2,89 +2,88 @@
 
 ## The output tree
 
+Regridding the archive in {doc}`running` to 4 km gives:
+
 ```
-OUTPUT_ROOT/<DOMAIN>_<res>m/<group>/<model>/<experiment-set>/<experiment>/*.nc
-OUTPUT_ROOT/<DOMAIN>_<res>m/logs/
+output/                        <-- --output-root
+└── GrIS_04000m/               <-- ice sheet and resolution
+    ├── NORCE/
+    │   └── CISM3/
+    │       └── CORE/
+    │           ├── C001/
+    │           │   ├── lithk_GrIS_NORCE_CISM3_m001_CESM2-WACCM_f001_historical_C001_1850-2014.nc
+    │           │   └── ...
+    │           └── C007/
+    └── logs/
+        ├── NORCE_CISM3_CORE_C001_20260911T140212Z.log
+        ├── NORCE_CISM3_CORE_C007_20260911T140431Z.log
+        └── run_20260911T140200Z.log
 ```
 
-For example
-`./output/GrIS_04000m/NORCE/CISM/CORE/C007/acabf_..._2015-2300.nc`.
+The directory names and the filenames are those of the archive. The one
+added directory, GrIS_04000m, carries the resolution, so that the filenames
+still follow the ISMIP7 naming convention.
 
-The directory names and the filenames are exactly those of the source archive.
-Only the top-level `<DOMAIN>_<res>m` directory is added, and it is what
-carries the resolution — **not** the filenames, which would otherwise have to
-be rewritten and would then no longer match the ISMIP7 naming convention.
+The path below it is the experiment's path relative to `--experiments-root`.
+If the experiments root is your model's folder rather than the ice sheet
+directory, the group and model are missing from the output:
 
-The mirrored path is the experiment's path relative to `--experiments-root`.
-If the experiment is not under that root — or none was given — the last four
-components are used instead, which is the
-`group/model/experiment-set/experiment` tail of a well-formed archive path.
-Four and not three: two groups can hold the same model, set and experiment
-number, and dropping the group would write both into one directory.
+```
+output/GrIS_04000m/CORE/C001/     <-- --experiments-root ISMIP7_submissions/GrIS/NORCE/CISM3
+```
+
+For `ismip7-process-experiment` without `--experiments-root`, or with an
+experiment outside it, the last four components of the experiment's path are
+used: group/model/set/experiment.
 
 ## Files that are not regridded
 
 A file with no spatial grid, or one already at the target resolution, is not
-put through CDO. `--on-unchanged` says what to put at its output path instead:
+put through CDO. `--on-unchanged` says what goes at its output path:
 
-`symlink` (default)
-: An absolute symlink back to the source file. Nothing is copied, which
-  matters when the file is large and unchanged, and the link resolves wherever
-  the output tree is read from.
+| `--on-unchanged` | Output |
+|---|---|
+| symlink (default) | an absolute symlink to the source file |
+| copy | a real copy, for an output tree that has to stand on its own when moved or archived |
+| skip | nothing |
 
-`copy`
-: A real copy. Use this when the output tree has to stand on its own — being
-  moved to another machine, or archived — where a symlink into the source
-  archive would dangle.
-
-`skip`
-: Nothing is written at all.
-
-Reruns are idempotent: an existing file or symlink at the output path is
-replaced. A *directory* at that path is refused rather than removed — that is
-an anomaly, not a stale result, and deleting one could throw away a great deal.
+Rerunning replaces an existing file or symlink at the output path. A
+directory at that path is refused rather than removed.
 
 ## Logs
 
-`logs/`, alongside the group directories, holds:
+The logs directory, beside the group directories, holds one timestamped log
+per experiment processed and one per `ismip7-run-all` run:
 
-- one timestamped log per experiment processed, whether run directly or
-  through `ismip7-run-all`, recording the settings used, the package version,
-  and a per-file `OK`/`FAIL` result;
-- one timestamped run log per `ismip7-run-all` invocation, with the
-  per-experiment results and the pass rate.
+```
+logs/
+├── NORCE_CISM3_CORE_C001_20260911T140212Z.log   settings, version, OK/FAIL per file
+├── NORCE_CISM3_CORE_C007_20260911T140431Z.log
+└── run_20260911T140200Z.log                      result per experiment, pass rate
+```
 
 An experiment where `--variables` matched nothing still gets a log saying so.
-"This experiment has none of the variables you asked for" is a result worth
-having on disk, not an absence to puzzle over later.
-
-Every log records the package version, so a regridded archive says what
-produced it.
+Every log records the package version.
 
 ## The weight cache
 
 Conservative remap weights are expensive to compute and depend only on the
-geometry of the two grids — not on the data — once the missing-value mask has
-been made uniform (see {doc}`methods`). So one weight file per
-(domain, source resolution, target resolution, method) is generated on first
-use and reused by every file after it:
+two grids, so one weight file per ice sheet, source resolution, target
+resolution and method is generated on first use and reused by every file
+after it:
 
 ```
-GrIS_16000m_to_04000m_ycon.nc
-GrIS_16000m_to_04000m_bil.nc
+~/.cache/ismip7-interpolation/weights/
+├── GrIS_16000m_to_04000m_ycon.nc
+└── GrIS_16000m_to_04000m_bil.nc
 ```
 
-This is a large speedup across a real archive, and needs nothing from you.
-Weights are generated from a synthetic constant field on the source grid, never
-from archive data, which keeps the read-only archive out of it entirely.
+Move it with `--weights-dir` or the ISMIP7_INTERP_WEIGHTS_DIR environment
+variable. The cache never needs backing up: delete it at any time and the
+next run regenerates what it needs. A run interrupted while writing weights
+cannot leave a truncated file behind.
 
-By default the cache lives in `~/.cache/ismip7-interpolation/weights`
-(or under `$XDG_CACHE_HOME`), because the package itself may well be installed
-read-only. Override it with `--weights-dir` or the
-`ISMIP7_INTERP_WEIGHTS_DIR` environment variable.
-
-The cache is reproducible from the grid definitions alone, so it never needs
-backing up and can be deleted at any time — the next run regenerates what it
-needs. Weights are written to a temporary file and renamed into place, so a
-run interrupted part-way through cannot leave a truncated file for a later run
-to trust.
+Weights can be shared because missing source cells are filled with 0 before
+remapping, which makes every file's mask the same. The few variables that
+keep their real mask, the velocity components, do not use the cache; see
+{doc}`methods`.

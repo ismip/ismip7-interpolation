@@ -1,9 +1,8 @@
 # Installing from source
 
-You only need this to work *on* the package. To regrid ISMIP7 output, install
-from conda-forge instead (see {doc}`../user/installation`).
-
-Create the conda environment and install the package into it:
+Users and developers install the same way (see {doc}`../user/installation`);
+the difference for working *on* the package is the `-e` flag, which gives an
+editable install. From a checkout of the repository:
 
 ```bash
 conda env create -f ismip7_interp_env.yml
@@ -12,8 +11,7 @@ python -m pip install --no-deps --no-build-isolation -e .
 ```
 
 `ismip7_interp_env.yml` installs the dependencies — CDO among them — but not
-the package itself, so the environment it creates is not the one conda-forge
-gives you: an `ismip7-interp` environment made this way holds no
+the package itself: an `ismip7-interp` environment holds no
 `ismip7-interpolation` package until the `pip install` runs.
 
 ```{warning}
@@ -42,9 +40,8 @@ package.
 
 ## Dependencies
 
-Installing from conda-forge pulls these in for you, and you can skip this
-section. It matters when you install from source, where the environment is
-yours to create.
+`ismip7_interp_env.yml` pulls these in for you, and you can skip this section
+if you use it. It matters when you build the environment some other way.
 
 Versions are constrained in `ismip7_interp_env.yml`; the same constraints
 appear in `pyproject.toml`. The suite is tested at both ends of every range,
@@ -60,9 +57,8 @@ bounds.
 
 ```{note}
 CDO is not in `pyproject.toml`'s `dependencies`, and cannot be: it is not
-installable from PyPI. It is a dependency of the conda-forge package and of
-`ismip7_interp_env.yml`, and the code reports its absence in as many words
-rather than assuming it.
+installable from PyPI. It is a dependency of `ismip7_interp_env.yml`, and the
+code reports its absence in as many words rather than assuming it.
 ```
 
 If you report a problem, please include the output of `conda list` for your

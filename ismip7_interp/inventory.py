@@ -1,14 +1,9 @@
 """A read-only report on what an ISMIP7 archive holds.
 
-Per file and per experiment: actual size, a *predicted* size after regridding
-to a target resolution, and completeness against the mandatory variables of
-the ISMIP7 data request.  Nothing is regridded and no data is read -- only file
-sizes and NetCDF headers -- so this is cheap enough to run over a whole archive
-and safe to run against a read-only one.
-
-The predicted size is a ballpark, not a promise: the actual size scaled by the
-ratio of target to source grid points.  It ignores header overhead,
-compression and per-variable data types.
+Per file and per experiment: the actual size, a predicted size after
+regridding to the target resolution, and which mandatory variables of the
+ISMIP7 data request are missing.  The predicted size is the actual size scaled
+by the ratio of target to source grid points, a ballpark for planning disk.
 """
 
 from __future__ import annotations
@@ -289,15 +284,16 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog='ismip7-inventory',
         description=__doc__,
-        epilog='Nothing is regridded and no data is read, so this is safe to '
-               'run against a read-only archive.')
+        epilog='Nothing is regridded and no data is read, only file sizes '
+               'and NetCDF headers, so this is safe to run against a '
+               'read-only archive.')
     cli.add_common_arguments(parser)
     cli.add_grid_arguments(parser)
     cli.add_experiments_root_argument(parser)
     parser.add_argument(
         '--output', type=Path, metavar='DIR',
-        help='where to write files.csv, experiments.csv and summary.txt; '
-             'defaults to ./inventory/<domain>')
+        help='where to write files.csv, experiments.csv and summary.txt '
+             '(default: inventory/GrIS or inventory/AIS)')
     cli.add_variables_argument(parser)
     return parser.parse_args(argv)
 

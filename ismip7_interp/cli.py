@@ -49,19 +49,19 @@ def add_grid_arguments(parser: argparse.ArgumentParser) -> None:
     """Add the domain and target-resolution arguments."""
     parser.add_argument(
         '--domain', required=True, choices=DOMAINS,
-        help='the ISMIP7 ice sheet domain')
+        help='the ice sheet')
     parser.add_argument(
         '--target-res', required=True, type=positive_int, metavar='METERS',
-        help='the target ISMIP7 grid resolution, in meters')
+        help='the ISMIP7 grid to regrid onto, as a resolution in meters, '
+             'e.g. 4000')
 
 
 def add_variables_argument(parser: argparse.ArgumentParser) -> None:
     """Add the ``--variables`` filter."""
     parser.add_argument(
         '--variables', metavar='VAR1,VAR2,...',
-        help='restrict processing to these ISMIP7 variables, matched against '
-             'the first "_"-separated token of each filename; the default is '
-             'every variable found')
+        help='only these variables, by the name that starts each filename, '
+             'e.g. lithk,acabf (default: every variable found)')
 
 
 def add_weights_argument(parser: argparse.ArgumentParser) -> None:
@@ -69,25 +69,33 @@ def add_weights_argument(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--weights-dir', type=Path, default=default_weights_dir(),
         metavar='DIR',
-        help='where to cache generated remap weights (default: %(default)s)')
+        help='where to keep the remap weights, which are computed once per '
+             'pair of grids and reused (default: %(default)s)')
 
 
 def add_on_unchanged_argument(parser: argparse.ArgumentParser) -> None:
     """Add the option controlling files that are not actually regridded."""
     parser.add_argument(
         '--on-unchanged', choices=ON_UNCHANGED_CHOICES, default='symlink',
-        help='how to place a file that is not regridded -- one with no '
-             'spatial grid, or one already at the target resolution: as an '
-             'absolute symlink to the source (default), a real copy, or not '
-             'at all')
+        help='what to put in the output for a file that needs no regridding '
+             'because it has no spatial grid or is already at the target '
+             'resolution: a symlink to the source (default), a copy, or '
+             'nothing')
 
 
-def add_experiments_root_argument(parser: argparse.ArgumentParser) -> None:
-    """Add the archive root, which defaults per domain."""
+def add_experiments_root_argument(parser: argparse.ArgumentParser,
+                                  has_default: bool = True) -> None:
+    """Add the archive root.
+
+    ``has_default`` says whether the command falls back to the NIRD archive
+    for the domain when the option is absent, which the help text mentions.
+    """
+    help_text = ('the ice sheet directory of the archive, which holds a '
+                 'folder per group, e.g. .../ISMIP7_submissions/GrIS')
+    if has_default:
+        help_text += ' (default: the NIRD archive for --domain)'
     parser.add_argument(
-        '--experiments-root', type=Path, metavar='ROOT',
-        help='the archive to read; defaults per --domain to the known NIRD '
-             'archive root')
+        '--experiments-root', type=Path, metavar='ROOT', help=help_text)
 
 
 def positive_int(text: str) -> int:

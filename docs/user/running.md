@@ -1,116 +1,114 @@
 # Running the tools
 
-Four commands, from one file up to a whole archive. Each is also reachable as
-`python -m ismip7_interp <command>`, which is what to use from a source
-checkout that has not been installed.
-
-| Command | Scope |
+| Command | Regrids |
 |---|---|
 | `ismip7-interpolate` | one file |
 | `ismip7-process-experiment` | one experiment directory |
-| `ismip7-run-all` | every experiment under an archive root |
-| `ismip7-inventory` | a read-only report — see {doc}`inventory` |
+| `ismip7-run-all` | every experiment in an archive |
+| `ismip7-inventory` | nothing; a read-only report, see {doc}`inventory` |
 
-## Terminology
+Each is also `python -m ismip7_interp <command>`, which works from a source
+checkout that has not been installed.
 
-An **experiment** is one archive directory,
-`<group>/<model>/<experiment-set>/<experiment>` — for example
-`NORCE/CISM/CORE/C007` — holding the NetCDF files for one run. A
-**submission** is all the experiments from one group with one model. These
-tools work per experiment, flattened across every submission in the archive.
+## The archive
+
+An **experiment** is one directory of NetCDF files for one run, four levels
+below the archive root. A **submission** is every experiment from one group
+with one model:
+
+```
+ISMIP7_submissions/GrIS/       <-- --experiments-root
+└── NORCE/                     <-- group
+    └── CISM3/                 <-- model
+        └── CORE/              <-- experiment set
+            ├── C001/          <-- experiment
+            └── C007/
+```
+
+The experiments root is the ice sheet directory, the one holding a folder per
+group. The output tree mirrors the archive below it, so pointing it at a
+group or model folder drops those levels from the output; see {doc}`output`.
+On NIRD it defaults to the real archive.
 
 ## One file
 
 ```bash
-ismip7-interpolate --domain GrIS|AIS --target-res METERS \
+ismip7-interpolate --domain GrIS --target-res 4000 \
     [--method ycon|bil|nn|auto] [--on-unchanged symlink|copy|skip] \
     [--weights-dir DIR] IN.nc OUT.nc
 ```
 
-The variable is read from `IN.nc`'s filename — the first `_`-separated token,
-per the ISMIP7 convention — and decides the remapping. `--method` overrides
-that for a spatial variable; it cannot make a variable with no spatial grid
-regriddable, and does not try. See {doc}`methods`.
+The variable name at the start of the filename decides the remapping.
+`--method` overrides that for a variable with a spatial grid; it cannot make
+a time series regriddable. See {doc}`methods`.
 
 ## One experiment
 
 ```bash
-ismip7-process-experiment --domain GrIS|AIS --target-res METERS \
+ismip7-process-experiment --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--on-unchanged symlink|copy|skip] \
     [--variables VAR1,VAR2,...] [--weights-dir DIR] \
     EXPERIMENT_DIR OUTPUT_ROOT
 ```
 
-Every `.nc` file directly inside `EXPERIMENT_DIR` is regridded — never
+Every .nc file directly inside the experiment directory is regridded, never
 anything below it. A file that fails is logged and the rest continue; the
 command exits non-zero if any failed.
 
-`--experiments-root` is what the output path is mirrored *from*; see
-{doc}`output`.
+Without `--experiments-root`, the last four components of the experiment's
+path, group/model/set/experiment, are mirrored into the output.
 
 ## A whole archive
 
 ```bash
-ismip7-run-all --domain GrIS|AIS --target-res METERS \
+ismip7-run-all --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--output-root DIR] \
     [--on-unchanged symlink|copy|skip] [--min-pass-pct PCT] \
     [--variables VAR1,VAR2,...] [--weights-dir DIR]
 ```
 
-**A failing experiment is not fatal.** Real archives contain non-standard
-files, renamed directories and incomplete runs; stopping at the first one
-would mean never getting through an archive. Each failure is logged and
-stepped over, and the run as a whole fails only if fewer than
-`--min-pass-pct` percent of experiments succeeded — 60 by default.
+A failing experiment is logged and skipped. The run as a whole fails only if
+fewer than `--min-pass-pct` percent of experiments succeed, 60 by default.
 
 ### Which directories count as experiments
 
-A directory is processed when all of these hold:
+Real archives hold abandoned copies and stray trees beside the real
+experiments. A directory is processed only when all of these hold:
 
-- it sits inside an experiment-set directory named *exactly* as configured —
-  `CORE` today, never `old_CORE`, `CORE_old` or `CESM2-WACCM_CORE`, which
-  appear beside the real ones in the archive as abandoned copies;
-- no directory above it, up to the archive root, is a deprecated one — the
-  archive contains `.../old_CORE/CORE/C001`, a live-looking `CORE` nested
-  inside a dead one;
-- its own name is the configured prefix and a three-digit number in range —
-  `C001` to `C011`;
-- it holds at least one `.nc` file **directly inside it**. This is what
-  excludes the archive's stray trees, which match the naming but contain
-  nothing but a `Users/...` subdirectory.
+| Rule | Processed | Skipped |
+|---|---|---|
+| the experiment set is named exactly as configured | CORE/C001 | old_CORE/C001, CORE_old/C001, CESM2-WACCM_CORE/C001 |
+| no directory above it is named old_CORE or CORE_old | CORE/C001 | old_CORE/CORE/C001 |
+| its name is the set's prefix and a three-digit number in range | C001 to C011 | C012, C1, core001 |
+| it holds at least one .nc file directly inside it | CORE/C001/lithk_….nc | CORE/C001/Users/… |
 
-## Common options
+CORE is the only experiment set open today. The sets and their number ranges
+are in ismip7_interp/data/config/experiment_sets.txt.
 
-`--domain GrIS|AIS`
-: The ice sheet. Required. A grid from one domain is never matched against the
-  other.
+## Options
 
-`--target-res METERS`
-: The ISMIP7 target resolution, in meters. Required. A resolution with no
-  ISMIP7 grid is an error that lists the ones that exist.
+| Option | Meaning | Default |
+|---|---|---|
+| `--domain` | the ice sheet, GrIS or AIS; required | |
+| `--target-res` | the ISMIP7 grid to regrid onto, as a resolution in meters; required | |
+| `--experiments-root` | the ice sheet directory of the archive | the NIRD archive for the domain |
+| `--output-root` | where the output tree goes; run-all only | output |
+| `--variables` | only these variables, by the name that starts each filename, e.g. lithk,acabf | every variable |
+| `--on-unchanged` | what to put in the output for a file that needs no regridding: symlink, copy or skip | symlink |
+| `--weights-dir` | where the remap weights are kept | ~/.cache/ismip7-interpolation/weights |
+| `--min-pass-pct` | fail the run if fewer than this percentage of experiments succeed; run-all only | 60 |
+| `--method` | the remapping for one file: ycon, bil, nn or auto; interpolate only | auto |
+| `-v`, `--verbose` | report each CDO command as it is run | |
+| `--version` | print the version | |
 
-`--experiments-root ROOT`
-: The archive to read. Defaults per `--domain` to the known NIRD archive root,
-  so on NIRD it can be left out.
+Asking for a resolution ISMIP7 does not have lists the ones it does:
 
-`--variables VAR1,VAR2,...`
-: Restrict processing to these variables, matched against the first
-  `_`-separated token of each filename. Spaces around names are fine:
-  `--variables "lithk, acabf"` means what it looks like. An experiment with
-  none of them is logged and skipped — some variables are optional and
-  legitimately absent — not treated as a failure.
+```
+no ISMIP7 grid for domain=GrIS resolution=4m (known GrIS resolutions: 1000, 2000, 4000, 5000, 8000, 16000)
+```
 
-`--on-unchanged symlink|copy|skip`
-: What to do with a file that is not actually regridded. Default `symlink`.
-  See {doc}`output`.
+Spaces in `--variables` are fine: `--variables "lithk, acabf"` means what it
+looks like. An experiment with none of the requested variables is logged and
+skipped, not counted as a failure, since some variables are optional.
 
-`--weights-dir DIR`
-: Where to cache remap weights. See {doc}`output`.
-
-`-v`, `--verbose`
-: Add CDO's own `-v` output, which reports every weight and timing it
-  computes. Useful for one file; a great deal for an archive.
-
-`--version`
-: Print the version. Every log records it too, so a regridded archive says
-  what produced it.
+Every log records the version, so a regridded archive says what produced it.
