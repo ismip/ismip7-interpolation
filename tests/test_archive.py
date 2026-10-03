@@ -106,6 +106,22 @@ def test_find_experiments_returns_each_directory_once(tmp_path, make_archive):
     assert len(found) == len(set(found))
 
 
+def test_find_experiments_follows_symlinked_group_directories(tmp_path):
+    """A user-facing archive root can hide a real NIRD path behind a symlink."""
+    real_root = tmp_path / 'real-archive'
+    real_root.mkdir()
+    experiment = real_root / 'GrIS/NORCE/CISM/CORE/C001'
+    experiment.mkdir(parents=True)
+    (experiment / 'lithk_GrIS_x.nc').touch()
+
+    alias_root = tmp_path / 'Models' / 'GrIS'
+    alias_root.mkdir(parents=True)
+    (alias_root / 'NORCE').symlink_to(real_root / 'GrIS' / 'NORCE', target_is_directory=True)
+
+    assert find_experiments(alias_root) == [
+        alias_root / 'NORCE/CISM/CORE/C001']
+
+
 def test_find_experiments_is_sorted(tmp_path, make_archive):
     make_archive(tmp_path, {
         'Z/M/CORE/C003': NC, 'A/M/CORE/C001': NC, 'M/M/CORE/C002': NC})
@@ -175,7 +191,7 @@ def test_experiment_rel_path_under_the_root(tmp_path):
 
 
 def test_experiment_rel_path_keeps_the_group_when_outside_the_root(
-        tmp_path):
+    tmp_path, caplog):
     """The fallback must keep group/model/set/experiment, not drop the group.
 
     Two groups can hold the same model, set and experiment number, so a
@@ -185,8 +201,10 @@ def test_experiment_rel_path_keeps_the_group_when_outside_the_root(
     experiment.mkdir(parents=True)
     elsewhere = tmp_path / 'unrelated'
     elsewhere.mkdir()
+    caplog.set_level('INFO')
     assert experiment_rel_path(experiment, elsewhere) == Path(
         'GroupA/ModelA/CORE/C001')
+    assert 'likely because experiments-root contains a symlink' in caplog.text
 
 
 def test_experiment_rel_path_with_no_root_given(tmp_path):

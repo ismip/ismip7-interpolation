@@ -11,7 +11,6 @@ from pathlib import Path
 from ismip7_interp import __version__, cli
 from ismip7_interp.archive import find_experiments
 from ismip7_interp.experiment import _stamp, process_experiment, utc_now
-from ismip7_interp.grids import res_dir_name
 
 LOGGER = logging.getLogger(__name__)
 
@@ -92,12 +91,12 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
             report.experiments.append(('FAIL', experiment_dir))
 
     report.run_log = _write_run_log(
-        Path(output_root) / res_dir_name(domain, target_res) / 'logs', report,
+        Path(output_root) / domain / 'logs', report,
         domain, target_res, on_unchanged, variables, min_pass_pct, started)
     LOGGER.info('done: %d/%d experiment(s) passed (%d%%) -- output under %s, '
                 'run log at %s', report.n_passed, report.n_total,
                 report.pass_pct,
-                Path(output_root) / res_dir_name(domain, target_res),
+                Path(output_root) / domain,
                 report.run_log)
     return report
 

@@ -10,6 +10,7 @@ every submission in the archive.
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -120,12 +121,14 @@ def find_experiments(root: Path) -> list[Path]:
     root = Path(root)
     found: set[Path] = set()
     for experiment_set in experiment_sets():
-        for set_dir in root.rglob(experiment_set.name):
-            if not set_dir.is_dir():
+        for base, dirs, _ in os.walk(root, topdown=True, followlinks=True):
+            current = Path(base)
+            dirnames = sorted(dirs)
+            if current.name != experiment_set.name:
                 continue
-            if _has_deprecated_ancestor(set_dir, root):
+            if _has_deprecated_ancestor(current, root):
                 continue
-            for entry in set_dir.iterdir():
+            for entry in sorted(current.iterdir()):
                 if not entry.is_dir():
                     continue
                 if not experiment_set.matches(entry.name):
@@ -133,6 +136,7 @@ def find_experiments(root: Path) -> list[Path]:
                 if not has_nc_files(entry):
                     continue
                 found.add(entry)
+            dirs[:] = dirnames
     return sorted(found)
 
 
@@ -162,14 +166,18 @@ def experiment_rel_path(experiment_dir: Path,
     :data:`EXPERIMENT_PATH_DEPTH` components are used instead, which is the
     group/model/experiment-set/experiment tail of a well-formed archive path.
     """
-    experiment_dir = Path(experiment_dir).resolve()
+    experiment_dir = Path(experiment_dir)
     if experiments_root is not None:
-        experiments_root = Path(experiments_root).resolve()
-        if experiment_dir.is_relative_to(experiments_root):
+        experiments_root = Path(experiments_root)
+        try:
             return experiment_dir.relative_to(experiments_root)
+        except ValueError:
+            pass
     parts = experiment_dir.parts[-EXPERIMENT_PATH_DEPTH:]
     fallback = Path(*parts)
     LOGGER.info(
-        "'%s' is not under the experiments root; mirroring its last %d path "
-        'components: %s', experiment_dir, EXPERIMENT_PATH_DEPTH, fallback)
+        "'%s' is not under the experiments root, likely because "
+        'experiments-root contains a symlink; mirroring its last %d path '
+        'components: %s', experiment_dir,
+        EXPERIMENT_PATH_DEPTH, fallback)
     return fallback

@@ -60,16 +60,24 @@ ismip7-process-experiment --domain GrIS --target-res 4000 \
 ismip7-interpolate --domain GrIS --target-res 4000 IN.nc OUT.nc
 ```
 
-Output mirrors the archive under one directory named for the ice sheet and
-resolution. Filenames do not change:
+The inventory command writes `files_GrIS.csv`, `experiments_GrIS.csv` and
+`summary_GrIS.txt` into `inventory`. The domain suffix keeps scans of GrIS and
+AIS separate even when they share an output directory.
+
+Output mirrors the archive under one directory named for the ice sheet.
+Filenames do not change:
 
 ```
-output/GrIS_04000m/
+output/GrIS/
 ├── NORCE/CISM3/CORE/C001/lithk_GrIS_NORCE_CISM3_m001_CESM2-WACCM_f001_historical_C001_1850-2014.nc
 ├── NORCE/CISM3/CORE/C007/...
 ├── AWI/PISM/CORE/C007/...
 └── logs/
 ```
+
+Use a different `--output-root` for each target resolution if you need to keep
+outputs at multiple resolutions; otherwise, later runs replace files at the
+same paths.
 
 Each command is also `python -m ismip7_interp <command>`. Run any of them
 with `--help`.

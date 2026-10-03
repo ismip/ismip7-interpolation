@@ -47,7 +47,7 @@ def test_the_whole_archive_regrids(tmp_path, archive, weights_dir):
     assert report.n_total == 2
     assert report.pass_pct == 100
 
-    regridded = output / 'GrIS_08000m'
+    regridded = output / 'GrIS'
     for relative, variables in {
         'GroupA/ModelA/CORE/C001': ('lithk', 'acabf'),
         'GroupB/ModelB/CORE/C002': ('lithk', 'xvelsurf', 'yvelsurf'),
@@ -62,7 +62,7 @@ def test_the_scalar_file_is_symlinked_not_regridded(tmp_path, archive,
     output = tmp_path / 'out'
     run_all_experiments(archive, output, 'GrIS', TARGET_RES,
                         weights_dir=weights_dir)
-    path = (output / 'GrIS_08000m/GroupA/ModelA/CORE/C001'
+    path = (output / 'GrIS/GroupA/ModelA/CORE/C001'
             / f'lim_{NAME_TAIL}')
     assert path.is_symlink()
 
@@ -72,7 +72,7 @@ def test_the_directory_tree_is_mirrored_exactly(tmp_path, archive,
     output = tmp_path / 'out'
     run_all_experiments(archive, output, 'GrIS', TARGET_RES,
                         weights_dir=weights_dir)
-    regridded = output / 'GrIS_08000m'
+    regridded = output / 'GrIS'
     source = {path.relative_to(archive)
               for path in archive.rglob('*.nc')}
     written = {path.relative_to(regridded)
@@ -109,7 +109,7 @@ def test_the_inventory_agrees_with_what_regridding_did(tmp_path, archive):
     for summary in inventory.experiments:
         assert summary.regrid_status == NEEDS_REGRID
 
-    with open(tmp_path / 'inventory/files.csv', newline='') as handle:
+    with open(tmp_path / 'inventory/files_GrIS.csv', newline='') as handle:
         rows = list(csv.DictReader(handle))
     assert len(rows) == 6
     for row in rows:
@@ -132,7 +132,7 @@ def test_regridding_twice_gives_the_same_values(tmp_path, archive,
     for output in (first, second):
         run_all_experiments(archive, output, 'GrIS', TARGET_RES,
                             weights_dir=weights_dir)
-    path = f'GrIS_08000m/GroupA/ModelA/CORE/C001/lithk_{NAME_TAIL}'
+    path = f'GrIS/GroupA/ModelA/CORE/C001/lithk_{NAME_TAIL}'
     with netCDF4.Dataset(first / path) as one, \
             netCDF4.Dataset(second / path) as two:
         assert np.array_equal(one['lithk'][:], two['lithk'][:])
@@ -157,5 +157,5 @@ def test_a_run_at_the_target_resolution_changes_nothing(tmp_path, archive,
                                  weights_dir=weights_dir)
     assert report.pass_pct == 100
     assert not weights_dir.exists() or list(weights_dir.glob('*.nc')) == []
-    for path in (output / 'GrIS_16000m').rglob('*.nc'):
+    for path in (output / 'GrIS').rglob('*.nc'):
         assert path.is_symlink()

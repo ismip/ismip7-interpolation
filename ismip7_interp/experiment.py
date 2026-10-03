@@ -15,7 +15,6 @@ from ismip7_interp.archive import (
     parse_variable_filter,
     variable_wanted,
 )
-from ismip7_interp.grids import res_dir_name
 from ismip7_interp.interpolate import interpolate_file
 from ismip7_interp.variables import var_from_filename
 
@@ -66,13 +65,12 @@ def process_experiment(experiment_dir: Path, output_root: Path, domain: str,
                        verbose: bool = False) -> ExperimentReport:
     """Regrid every NetCDF file in one experiment directory.
 
-    Output goes to ``output_root/<DOMAIN>_<res>m/<mirrored path>``, where the
+    Output goes to ``output_root/<DOMAIN>/<mirrored path>``, where the
     mirrored path is the experiment's path relative to ``experiments_root``.
-    Filenames are unchanged: the resolution lives in the one top-level
-    directory, not in every name.
+    Filenames are unchanged; the target resolution is recorded in the log.
 
     A timestamped log recording what was processed is written to
-    ``output_root/<DOMAIN>_<res>m/logs/`` -- including when the
+    ``output_root/<DOMAIN>/logs/`` -- including when the
     ``--variables`` filter matched nothing, since "this experiment has none of
     the variables you asked for" is a result worth having on disk rather than
     an absence to puzzle over later.
@@ -84,7 +82,7 @@ def process_experiment(experiment_dir: Path, output_root: Path, domain: str,
 
     started = utc_now()
     rel_path = experiment_rel_path(experiment_dir, experiments_root)
-    res_dir = Path(output_root) / res_dir_name(domain, target_res)
+    res_dir = Path(output_root) / domain
     out_dir = res_dir / rel_path
     logs_dir = res_dir / 'logs'
 

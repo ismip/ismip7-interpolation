@@ -20,16 +20,6 @@ class GridError(ValueError):
     """No ISMIP7 grid matches what was asked for."""
 
 
-def res_dir_name(domain: str, res_m: int) -> str:
-    """Return the output directory name for a domain and resolution.
-
-    ``GrIS``, 4000 -> ``GrIS_04000m``.  Output is written under
-    ``OUTPUT_ROOT/<res_dir_name>/``, so the resolution lives in one top-level
-    directory rather than in every filename.
-    """
-    return f'{domain}_{res_m:05d}m'
-
-
 @lru_cache(maxsize=None)
 def available_resolutions(domain: str) -> dict[int, Path]:
     """Return every resolution with a grid description file, by resolution."""
