@@ -12,6 +12,11 @@ channels:
 dependencies:
 # Interpreter and build tools
   - python >=3.11,<3.15
+  # The standard build of Python, not the free-threaded one.  Left open, the
+  # osx-arm64 solve picks free-threaded 3.14, and cf-units (a dependency of
+  # isschecker) has an ABI3 build that cannot load there: importing it fails
+  # with "init function of _udunits2 returned uninitialized object".
+  - python-gil
   - pip >=24
   # setuptools is required by `pip install --no-build-isolation` (conda-forge
   # python no longer vendors it); >=77 for PEP 639 license metadata
