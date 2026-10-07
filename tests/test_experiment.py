@@ -181,6 +181,26 @@ def test_the_log_lands_beside_the_output_not_inside_it(tmp_path, experiment,
     assert report.log_file.parent == tmp_path / 'out/GrIS_08000m/logs'
 
 
+def test_a_parent_experiments_root_resolves_to_the_domain_directory(
+        tmp_path, interpolated):
+    """--experiments-root may be a parent of the domain dir, as elsewhere."""
+    models_root = tmp_path / 'Models'
+    experiment = models_root / 'GrIS' / 'GroupA' / 'ModelA' / 'CORE' / 'C001'
+    experiment.mkdir(parents=True)
+    for variable in VARIABLES:
+        (experiment / f'{variable}_{NAME_TAIL}').write_bytes(b'data')
+    report = process_experiment(experiment, tmp_path / 'out', 'GrIS',
+                                TARGET_RES, experiments_root=models_root)
+    assert report.rel_path == Path('GroupA/ModelA/CORE/C001')
+
+
+def test_a_bogus_experiments_root_fails_fast(tmp_path, experiment,
+                                             interpolated):
+    with pytest.raises(NotADirectoryError, match='--experiments-root'):
+        process_experiment(experiment, tmp_path / 'out', 'GrIS', TARGET_RES,
+                           experiments_root=tmp_path / 'absent')
+
+
 def test_the_log_name_identifies_the_experiment(tmp_path, experiment,
                                                 interpolated):
     """All the logs share one directory, so their names must not collide."""

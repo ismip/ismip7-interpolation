@@ -83,6 +83,11 @@ def process_experiment(experiment_dir: Path, output_root: Path, domain: str,
             f'experiment directory not found: {experiment_dir}')
 
     started = utc_now()
+    if experiments_root is not None:
+        # Same resolution as run-all and inventory: accept the domain
+        # directory or a parent holding it, and fail fast on a bogus root.
+        experiments_root = cli.resolve_experiments_root(experiments_root,
+                                                        domain)
     rel_path = experiment_rel_path(experiment_dir, experiments_root)
     res_dir = Path(output_root) / res_dir_name(domain, target_res)
     out_dir = res_dir / rel_path

@@ -106,6 +106,51 @@ def test_find_experiments_returns_each_directory_once(tmp_path, make_archive):
     assert len(found) == len(set(found))
 
 
+def test_find_experiments_follows_symlinked_group_directories(tmp_path):
+    """A user-facing archive root can hide a real NIRD path behind a symlink."""
+    real_root = tmp_path / 'real-archive'
+    real_root.mkdir()
+    experiment = real_root / 'GrIS/NORCE/CISM/CORE/C001'
+    experiment.mkdir(parents=True)
+    (experiment / 'lithk_GrIS_x.nc').touch()
+
+    alias_root = tmp_path / 'Models' / 'GrIS'
+    alias_root.mkdir(parents=True)
+    (alias_root / 'NORCE').symlink_to(real_root / 'GrIS' / 'NORCE', target_is_directory=True)
+
+    assert find_experiments(alias_root) == [
+        alias_root / 'NORCE/CISM/CORE/C001']
+
+
+def test_find_experiments_does_not_loop_on_a_back_pointing_symlink(tmp_path):
+    """A link pointing back up the tree must not multiply experiments.
+
+    With followlinks=True and no loop detection, os.walk would descend
+    ``up -> ..`` forever, returning the same experiment once per spelling.
+    """
+    experiment = tmp_path / 'GrIS/NORCE/CISM/CORE/C001'
+    experiment.mkdir(parents=True)
+    (experiment / 'lithk_GrIS_x.nc').touch()
+    (tmp_path / 'GrIS' / 'NORCE' / 'up').symlink_to(
+        tmp_path / 'GrIS' / 'NORCE' / '..' / '..' / '..' / 'GrIS' / 'NORCE',
+        target_is_directory=True)
+
+    found = find_experiments(tmp_path)
+    assert found == [tmp_path / 'GrIS/NORCE/CISM/CORE/C001']
+
+
+def test_find_experiments_deduplicates_an_alias_symlink(tmp_path):
+    """Two names for one directory yield its experiments once."""
+    real = tmp_path / 'real' / 'NORCE' / 'CISM' / 'CORE' / 'C001'
+    real.mkdir(parents=True)
+    (real / 'lithk_GrIS_x.nc').touch()
+    (tmp_path / 'alias').symlink_to(tmp_path / 'real',
+                                    target_is_directory=True)
+
+    found = find_experiments(tmp_path)
+    assert len(found) == 1
+
+
 def test_find_experiments_is_sorted(tmp_path, make_archive):
     make_archive(tmp_path, {
         'Z/M/CORE/C003': NC, 'A/M/CORE/C001': NC, 'M/M/CORE/C002': NC})
@@ -186,6 +231,21 @@ def test_experiment_rel_path_keeps_the_group_when_outside_the_root(
     elsewhere = tmp_path / 'unrelated'
     elsewhere.mkdir()
     assert experiment_rel_path(experiment, elsewhere) == Path(
+        'GroupA/ModelA/CORE/C001')
+
+
+def test_experiment_rel_path_matches_a_relative_experiment_against_an_absolute_root(
+        tmp_path):
+    """A relative experiment path and an absolute root still compare equal.
+
+    The comparison is textual (abspath, not resolve), so it must not depend
+    on how each path was spelled on the command line.
+    """
+    experiment = tmp_path / 'GroupA/ModelA/CORE/C001'
+    experiment.mkdir(parents=True)
+    absolute_root = tmp_path.resolve()
+    relative_experiment = experiment.relative_to(tmp_path)
+    assert experiment_rel_path(relative_experiment, absolute_root) == Path(
         'GroupA/ModelA/CORE/C001')
 
 

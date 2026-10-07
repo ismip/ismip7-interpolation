@@ -91,7 +91,9 @@ def add_experiments_root_argument(parser: argparse.ArgumentParser,
     for the domain when the option is absent, which the help text mentions.
     """
     help_text = ('the ice sheet directory of the archive, which holds a '
-                 'folder per group, e.g. .../ISMIP7_submissions/GrIS')
+                 'folder per group, e.g. .../ISMIP7_submissions/GrIS; this '
+                 'may also be a parent directory that contains the requested '
+                 'domain folder, e.g. .../Models')
     if has_default:
         help_text += ' (default: the NIRD archive for --domain)'
     parser.add_argument(
@@ -122,15 +124,30 @@ def percentage(text: str) -> int:
 
 
 def resolve_experiments_root(root: Path | None, domain: str) -> Path:
-    """Return the archive root to read, applying the per-domain default."""
+    """Return the archive root to read, applying the per-domain default.
+
+    A user can point at either the domain directory itself, e.g.
+    ``.../GrIS``, or a parent directory such as ``.../Models`` that holds a
+    ``GrIS`` subdirectory.  The requested domain is always the one that is
+    used as the actual archive root.
+    """
     if root is None:
         root = DEFAULT_EXPERIMENTS_ROOT[domain]
     root = Path(root)
-    if not root.is_dir():
-        raise NotADirectoryError(
-            f'experiments root not found: {root}.  Pass --experiments-root to '
-            f'point at the archive you mean.')
-    return root
+
+    if root.name == domain:
+        candidates = [root]
+    else:
+        candidates = [root / domain, root]
+
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+
+    raise NotADirectoryError(
+        f'experiments root not found: {root}.  Pass --experiments-root to '
+        f'point at the archive you mean; if the directory is a parent of '
+        f'{domain}, it will be resolved to {root / domain} automatically.')
 
 
 def run_main(work) -> int:

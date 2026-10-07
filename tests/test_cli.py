@@ -133,9 +133,24 @@ def test_resolve_experiments_root_uses_the_domain_default(monkeypatch,
     assert cli.resolve_experiments_root(None, 'GrIS') == tmp_path
 
 
+def test_resolve_experiments_root_accepts_parent_directory_for_domain(
+        tmp_path):
+    models_root = tmp_path / 'Models'
+    domain_root = models_root / 'GrIS'
+    domain_root.mkdir(parents=True)
+    assert cli.resolve_experiments_root(models_root, 'GrIS') == domain_root
+
+
 def test_resolve_experiments_root_reports_a_missing_directory(tmp_path):
     with pytest.raises(NotADirectoryError, match='--experiments-root'):
         cli.resolve_experiments_root(tmp_path / 'absent', 'GrIS')
+
+
+def test_resolve_experiments_root_prefers_the_domain_directory(tmp_path):
+    """A root that is itself the domain dir wins over a GrIS child of it."""
+    (tmp_path / 'GrIS' / 'GrIS').mkdir(parents=True)
+    assert cli.resolve_experiments_root(tmp_path / 'GrIS', 'GrIS') == (
+        tmp_path / 'GrIS')
 
 
 def test_run_main_turns_an_expected_error_into_a_status(caplog):
