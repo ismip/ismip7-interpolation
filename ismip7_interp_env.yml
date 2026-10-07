@@ -12,6 +12,9 @@ channels:
 dependencies:
 # Interpreter and build tools
   - python >=3.11,<3.15
+  # Free-threaded python can't load cf-units' abi3 extension
+  # (conda-forge/cf_units-feedstock#69); drop once that's released.
+  - python-gil
   - pip >=24
   # setuptools is required by `pip install --no-build-isolation` (conda-forge
   # python no longer vendors it); >=77 for PEP 639 license metadata
