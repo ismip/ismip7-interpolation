@@ -6,7 +6,7 @@ Regridding the archive in {doc}`running` to 4 km gives:
 
 ```
 output/                        <-- --output-root
-└── GrIS/                      <-- ice sheet
+└── GrIS_04000m/               <-- ice sheet and resolution
     ├── NORCE/
     │   └── CISM3/
     │       └── CORE/
@@ -20,16 +20,16 @@ output/                        <-- --output-root
         └── run_20260911T140200Z.log
 ```
 
-The directory names and the filenames are those of the archive. The added
-directory, GrIS, identifies the ice sheet; the target resolution is recorded
-in the logs.
+The directory names and the filenames are those of the archive. The one
+added directory, GrIS_04000m, carries the resolution, so that the filenames
+still follow the ISMIP7 naming convention.
 
 The path below it is the experiment's path relative to `--experiments-root`.
 If the experiments root is your model's folder rather than the ice sheet
 directory, the group and model are missing from the output:
 
 ```
-output/GrIS/CORE/C001/     <-- --experiments-root ISMIP7_submissions/GrIS/NORCE/CISM3
+output/GrIS_04000m/CORE/C001/     <-- --experiments-root ISMIP7_submissions/GrIS/NORCE/CISM3
 ```
 
 For `ismip7-process-experiment` without `--experiments-root`, or with an
@@ -48,9 +48,7 @@ put through CDO. `--on-unchanged` says what goes at its output path:
 | skip | nothing |
 
 Rerunning replaces an existing file or symlink at the output path. A
-directory at that path is refused rather than removed. Since the target
-resolution is not part of the output path or filename, use a separate
-`--output-root` for each resolution you need to retain.
+directory at that path is refused rather than removed.
 
 ## Logs
 

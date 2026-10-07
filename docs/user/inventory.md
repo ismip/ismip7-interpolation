@@ -12,19 +12,13 @@ a whole archive and safe against a read-only one.
 ## What it writes
 
 ```
-inventory/GrIS/           <-- default output directory; per ice sheet
-├── summary_GrIS.txt           counts across the archive; read this first
-├── experiments_GrIS.csv       one row per experiment
-└── files_GrIS.csv             one row per file
+inventory/GrIS/           <-- --output; the default is per ice sheet
+├── summary.txt           counts across the archive; read this first
+├── experiments.csv       one row per experiment
+└── files.csv             one row per file
 ```
 
-When `--output` is omitted, reports go to `inventory/<DOMAIN>/`. When
-`--output DIR` is supplied, reports go directly into `DIR`, named
-`summary_<DOMAIN>.txt`, `experiments_<DOMAIN>.csv` and `files_<DOMAIN>.csv`.
-The domain in each filename lets GrIS and AIS share a custom output directory
-without overwriting one another.
-
-summary_GrIS.txt:
+summary.txt:
 
 ```
 domain:             GrIS
@@ -40,9 +34,9 @@ unknown_grid:       2
 no_spatial_data:    1
 ```
 
-experiments_GrIS.csv has, per experiment, the file count, which mandatory
+experiments.csv has, per experiment, the file count, which mandatory
 variables are missing, the actual and predicted total bytes, and a
-regrid_status. files_GrIS.csv has, per file, the variable, whether it is
+regrid_status. files.csv has, per file, the variable, whether it is
 mandatory, what kind of file it is, its source resolution, and its actual and
 predicted size.
 
@@ -56,7 +50,7 @@ predicted size.
 | no_spatial_data | no file could be read as a spatial grid |
 
 **unknown_grid is the number to look at.** A source grid is never guessed,
-so those files will fail when regridded. files_GrIS.csv says which they are.
+so those files will fail when regridded. files.csv says which they are.
 
 A file that cannot be opened is recorded with kind unreadable and the scan
 carries on.

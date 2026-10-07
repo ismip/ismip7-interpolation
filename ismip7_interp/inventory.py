@@ -54,7 +54,7 @@ EXPERIMENT_COLUMNS = ('experiment', 'n_files', 'n_mandatory_expected',
 
 @dataclass
 class FileRow:
-    """One row of a domain-specific files CSV report."""
+    """One row of ``files.csv``."""
 
     experiment: Path
     variable: str
@@ -81,7 +81,7 @@ class FileRow:
 
 @dataclass
 class ExperimentRow:
-    """One row of a domain-specific experiments CSV report."""
+    """One row of ``experiments.csv``."""
 
     experiment: Path
     n_files: int
@@ -202,7 +202,7 @@ def scan_experiment(experiment_dir: Path, domain: str, target_points: int,
 def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
                       target_res: int,
                       variables: str | None = None) -> Inventory:
-    """Scan an archive, writing domain-specific CSVs and a summary.
+    """Scan an archive, writing the two CSVs and the summary.
 
     With ``variables`` given, every other file is skipped outright rather than
     filtered out of the report, which is a real speedup and not just a smaller
@@ -253,19 +253,19 @@ def _write_inventory(inventory: Inventory, output_dir: Path,
     # newline='' and csv.DictWriter, not manual string joining: an archive path
     # is free to contain a comma, and one that did would silently shift every
     # later column of that row.
-    with open(output_dir / f'files_{domain}.csv', 'w', newline='') as handle:
+    with open(output_dir / 'files.csv', 'w', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=FILE_COLUMNS)
         writer.writeheader()
         for row in inventory.files:
             writer.writerow(row.as_row())
-    with open(output_dir / f'experiments_{domain}.csv', 'w', newline='') as handle:
+    with open(output_dir / 'experiments.csv', 'w', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=EXPERIMENT_COLUMNS)
         writer.writeheader()
         for row in inventory.experiments:
             writer.writerow(row.as_row())
 
     counts = inventory.status_counts
-    (output_dir / f'summary_{domain}.txt').write_text('\n'.join([
+    (output_dir / 'summary.txt').write_text('\n'.join([
         f'domain:             {domain}',
         f'target_res_m:       {target_res}',
         f'experiments_root:   {experiments_root}',
@@ -292,9 +292,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     cli.add_experiments_root_argument(parser)
     parser.add_argument(
         '--output', type=Path, metavar='DIR',
-                help='where to write files_<DOMAIN>.csv, '
-                         'experiments_<DOMAIN>.csv and summary_<DOMAIN>.txt '
-                         '(default: inventory/GrIS or inventory/AIS)')
+        help='where to write files.csv, experiments.csv and summary.txt '
+             '(default: inventory/GrIS or inventory/AIS)')
     cli.add_variables_argument(parser)
     return parser.parse_args(argv)
 

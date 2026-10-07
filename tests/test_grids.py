@@ -11,7 +11,19 @@ from ismip7_interp.grids import (
     detect_res_from_dims,
     gdf_dims,
     gdf_path,
+    res_dir_name,
 )
+
+
+@pytest.mark.parametrize('domain, res_m, expected', [
+    ('GrIS', 4000, 'GrIS_04000m'),
+    ('GrIS', 1000, 'GrIS_01000m'),
+    ('AIS', 8000, 'AIS_08000m'),
+    # Five digits already: the padding must not push it to six.
+    ('AIS', 32000, 'AIS_32000m'),
+])
+def test_res_dir_name(domain, res_m, expected):
+    assert res_dir_name(domain, res_m) == expected
 
 
 def test_both_domains_have_grids():

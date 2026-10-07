@@ -116,7 +116,7 @@ def test_the_run_log_sits_beside_the_per_experiment_logs(tmp_path, archive,
                                                          processed):
     report = run_all_experiments(archive, tmp_path / 'out', 'GrIS',
                                  TARGET_RES)
-    assert report.run_log.parent == tmp_path / 'out/GrIS/logs'
+    assert report.run_log.parent == tmp_path / 'out/GrIS_08000m/logs'
 
 
 @pytest.mark.parametrize('n_passed, n_total, expected', [

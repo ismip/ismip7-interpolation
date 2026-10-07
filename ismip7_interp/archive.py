@@ -119,24 +119,39 @@ def find_experiments(root: Path) -> list[Path]:
     number in range, and it holds at least one NetCDF file directly inside it.
     """
     root = Path(root)
+    sets_by_name = {s.name: s for s in experiment_sets()}
     found: set[Path] = set()
-    for experiment_set in experiment_sets():
-        for base, dirs, _ in os.walk(root, topdown=True, followlinks=True):
-            current = Path(base)
-            dirnames = sorted(dirs)
-            if current.name != experiment_set.name:
+    # Directories already walked, by device and inode.  ``followlinks=True``
+    # makes ``os.walk`` descend into symlinked directories, which is what lets
+    # an alias root (a symlinked group, or a parent holding a symlinked
+    # ``GrIS``) be searched at all -- but it also means a link pointing back up
+    # the tree, or two names for one directory, would be walked once per name,
+    # forever for a loop.  Pruning by (st_dev, st_ino) keeps the first
+    # encounter (deterministic, because the walk is sorted) and drops the rest.
+    seen: set[tuple[int, int]] = set()
+    for base, dirs, _ in os.walk(root, topdown=True, followlinks=True):
+        current = Path(base)
+        keep = []
+        for name in dirs:
+            stat = (current / name).stat()
+            key = (stat.st_dev, stat.st_ino)
+            if key not in seen:
+                seen.add(key)
+                keep.append(name)
+        dirs[:] = sorted(keep)
+        experiment_set = sets_by_name.get(current.name)
+        if experiment_set is None:
+            continue
+        if _has_deprecated_ancestor(current, root):
+            continue
+        for entry in sorted(current.iterdir()):
+            if not entry.is_dir():
                 continue
-            if _has_deprecated_ancestor(current, root):
+            if not experiment_set.matches(entry.name):
                 continue
-            for entry in sorted(current.iterdir()):
-                if not entry.is_dir():
-                    continue
-                if not experiment_set.matches(entry.name):
-                    continue
-                if not has_nc_files(entry):
-                    continue
-                found.add(entry)
-            dirs[:] = dirnames
+            if not has_nc_files(entry):
+                continue
+            found.add(entry)
     return sorted(found)
 
 
@@ -168,7 +183,12 @@ def experiment_rel_path(experiment_dir: Path,
     """
     experiment_dir = Path(experiment_dir)
     if experiments_root is not None:
-        experiments_root = Path(experiments_root)
+        # abspath makes relative and absolute inputs comparable and resolves
+        # '..' without following symlinks -- so an experiment reached through
+        # a symlinked archive root still falls back, while a merely relative
+        # path still matches.
+        experiment_dir = Path(os.path.abspath(experiment_dir))
+        experiments_root = Path(os.path.abspath(experiments_root))
         try:
             return experiment_dir.relative_to(experiments_root)
         except ValueError:
@@ -176,8 +196,6 @@ def experiment_rel_path(experiment_dir: Path,
     parts = experiment_dir.parts[-EXPERIMENT_PATH_DEPTH:]
     fallback = Path(*parts)
     LOGGER.info(
-        "'%s' is not under the experiments root, likely because "
-        'experiments-root contains a symlink; mirroring its last %d path '
-        'components: %s', experiment_dir,
-        EXPERIMENT_PATH_DEPTH, fallback)
+        "'%s' is not under the experiments root; mirroring its last %d path "
+        'components: %s', experiment_dir, EXPERIMENT_PATH_DEPTH, fallback)
     return fallback

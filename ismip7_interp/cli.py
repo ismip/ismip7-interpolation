@@ -93,7 +93,7 @@ def add_experiments_root_argument(parser: argparse.ArgumentParser,
     help_text = ('the ice sheet directory of the archive, which holds a '
                  'folder per group, e.g. .../ISMIP7_submissions/GrIS; this '
                  'may also be a parent directory that contains the requested '
-                 'domain folder, e.g. .../Models/GrIS')
+                 'domain folder, e.g. .../Models')
     if has_default:
         help_text += ' (default: the NIRD archive for --domain)'
     parser.add_argument(

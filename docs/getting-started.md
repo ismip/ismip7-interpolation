@@ -46,8 +46,8 @@ Two things to notice:
   archive below it. If you point it at your own model's folder,
   ISMIP7_submissions/GrIS/NORCE/CISM3, the tools still find the experiments,
   but the output loses the group and model and lands in
-    output/GrIS/CORE/C007 instead of
-    output/GrIS/NORCE/CISM3/CORE/C007.
+  output/GrIS_04000m/CORE/C007 instead of
+  output/GrIS_04000m/NORCE/CISM3/CORE/C007.
 - **The variable is read from the filename**, the part before the first
   underscore, and decides how the file is remapped. A file named some other
   way gets the default, conservative remapping.
@@ -65,9 +65,8 @@ ismip7-inventory --domain GrIS --target-res 4000 \
     --experiments-root ISMIP7_submissions/GrIS --output inventory
 ```
 
-This writes files_GrIS.csv, experiments_GrIS.csv and summary_GrIS.txt. Read
-the summary first. The domain suffix lets AIS reports use the same output
-directory without overwriting these files:
+This writes files.csv, experiments.csv and summary.txt. Read the summary
+first:
 
 ```
 domain:             GrIS
@@ -81,7 +80,7 @@ no_spatial_data:    1
 
 unknown_grid is the number to look at. Those experiments are on a grid that is
 not one of the ISMIP7 grids, and they will fail rather than be guessed at.
-experiments_GrIS.csv says which they are. See {doc}`user/inventory`.
+experiments.csv says which they are. See {doc}`user/inventory`.
 
 ## Regrid the archive
 
@@ -121,7 +120,7 @@ ismip7-interpolate --domain GrIS --target-res 4000 \
 ## What comes out
 
 ```
-output/GrIS/
+output/GrIS_04000m/
 ├── NORCE/
 │   └── CISM3/
 │       └── CORE/
@@ -140,8 +139,7 @@ output/GrIS/
 ```
 
 The tree mirrors the archive, with the same directory and file names. The
-target resolution is recorded in the logs, not in the output path or filenames;
-use a separate `--output-root` for each resolution you need to retain. A file
+resolution is in the one top-level directory, not in the filenames. A file
 that needs no regridding, because it is already at the target resolution or
 has no spatial grid, is symlinked to the original. See {doc}`user/output`.
 

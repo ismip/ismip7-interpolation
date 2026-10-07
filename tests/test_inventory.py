@@ -64,34 +64,20 @@ def run(archive, tmp_path, **kwargs):
 
 def test_all_three_reports_are_written(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    for name in ('files_GrIS.csv', 'experiments_GrIS.csv', 'summary_GrIS.txt'):
+    for name in ('files.csv', 'experiments.csv', 'summary.txt'):
         assert (output / name).is_file()
-
-
-def test_reports_for_two_domains_do_not_overwrite_each_other(
-        archive, tmp_path):
-    output = tmp_path / 'inventory'
-    inventory_archive(archive, output, 'GrIS', TARGET_RES)
-    inventory_archive(archive, output, 'AIS', TARGET_RES)
-
-    for domain in ('GrIS', 'AIS'):
-        assert (output / f'files_{domain}.csv').is_file()
-        assert (output / f'experiments_{domain}.csv').is_file()
-        summary = output / f'summary_{domain}.txt'
-        assert summary.is_file()
-        assert f'domain:             {domain}' in summary.read_text()
 
 
 def test_a_row_per_file(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    rows = read_csv(output / 'files_GrIS.csv')
+    rows = read_csv(output / 'files.csv')
     assert {row['variable'] for row in rows} == {'lithk', 'lim'}
 
 
 def test_a_spatial_file_is_measured_and_its_resolution_detected(archive,
                                                                 tmp_path):
     _inventory, output = run(archive, tmp_path)
-    row = next(row for row in read_csv(output / 'files_GrIS.csv')
+    row = next(row for row in read_csv(output / 'files.csv')
                if row['variable'] == 'lithk')
     assert row['kind'] == SPATIAL
     assert row['source_res_m'] == str(SOURCE_RES)
@@ -102,7 +88,7 @@ def test_a_spatial_file_is_measured_and_its_resolution_detected(archive,
 def test_a_scalar_file_predicts_its_own_size(archive, tmp_path):
     """It is placed unchanged, so regridding does not change its size."""
     _inventory, output = run(archive, tmp_path)
-    row = next(row for row in read_csv(output / 'files_GrIS.csv')
+    row = next(row for row in read_csv(output / 'files.csv')
                if row['variable'] == 'lim')
     assert row['kind'] == SCALAR
     assert row['source_res_m'] == ''
@@ -111,7 +97,7 @@ def test_a_scalar_file_predicts_its_own_size(archive, tmp_path):
 
 def test_the_predicted_size_scales_with_the_grid(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    row = next(row for row in read_csv(output / 'files_GrIS.csv')
+    row = next(row for row in read_csv(output / 'files.csv')
                if row['variable'] == 'lithk')
     ratio = ((TARGET_DIMS[0] * TARGET_DIMS[1])
              / (SOURCE_DIMS[0] * SOURCE_DIMS[1]))
@@ -122,7 +108,7 @@ def test_the_predicted_size_scales_with_the_grid(archive, tmp_path):
 
 def test_a_row_per_experiment(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    rows = read_csv(output / 'experiments_GrIS.csv')
+    rows = read_csv(output / 'experiments.csv')
     assert len(rows) == 1
     assert rows[0]['n_files'] == '2'
     assert rows[0]['regrid_status'] == NEEDS_REGRID
@@ -130,7 +116,7 @@ def test_a_row_per_experiment(archive, tmp_path):
 
 def test_the_summary_counts_the_scan(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    text = (output / 'summary_GrIS.txt').read_text()
+    text = (output / 'summary.txt').read_text()
     assert 'experiments_total:  1' in text
     assert 'needs_regrid:       1' in text
     assert 'target_res_m:       8000' in text
@@ -145,7 +131,7 @@ def test_a_path_with_a_comma_does_not_shift_the_columns(tmp_path,
     write_gridded(experiment / f'lithk_{NAME_TAIL}', *SOURCE_DIMS)
 
     _inventory, output = run(root, tmp_path)
-    row = read_csv(output / 'files_GrIS.csv')[0]
+    row = read_csv(output / 'files.csv')[0]
     assert row['variable'] == 'lithk'
     assert 'Group,A' in row['experiment']
 
@@ -170,7 +156,7 @@ def test_status_unknown_grid(tmp_path, write_gridded):
 
     inventory, output = run(root, tmp_path)
     assert inventory.experiments[0].regrid_status == UNKNOWN_GRID
-    row = read_csv(output / 'files_GrIS.csv')[0]
+    row = read_csv(output / 'files.csv')[0]
     assert row['source_res_m'] == ''
     assert row['predicted_target_bytes'] == NOT_AVAILABLE
 
@@ -203,7 +189,7 @@ def test_an_unreadable_file_is_reported_not_fatal(tmp_path, write_gridded):
     (experiment / f'lonlat_{NAME_TAIL}').write_text('not a NetCDF file')
 
     inventory, output = run(root, tmp_path)
-    rows = read_csv(output / 'files_GrIS.csv')
+    rows = read_csv(output / 'files.csv')
     assert len(rows) == 2
     bad = next(row for row in rows if row['variable'] == 'lonlat')
     assert bad['kind'] == UNREADABLE
@@ -229,7 +215,7 @@ def test_an_unreadable_file_is_left_out_of_the_predicted_total(tmp_path,
 
 def test_missing_mandatory_variables_are_listed(archive, tmp_path):
     _inventory, output = run(archive, tmp_path)
-    row = read_csv(output / 'experiments_GrIS.csv')[0]
+    row = read_csv(output / 'experiments.csv')[0]
     missing = set(row['missing_mandatory'].split(';'))
     assert 'acabf' in missing
     assert 'lithk' not in missing
@@ -246,7 +232,7 @@ def test_a_substring_of_another_name_is_not_confused_with_it(tmp_path,
     _write_scalar(experiment / f'limnsw_{NAME_TAIL}')
 
     _inventory, output = run(root, tmp_path)
-    missing = set(read_csv(output / 'experiments_GrIS.csv')[0][
+    missing = set(read_csv(output / 'experiments.csv')[0][
         'missing_mandatory'].split(';'))
     assert 'lim' in missing
     assert 'limnsw' not in missing
@@ -256,14 +242,14 @@ def test_a_filtered_scan_only_expects_the_variables_it_looked_at(archive,
                                                                  tmp_path):
     """Otherwise every variable it never opened is reported as missing."""
     _inventory, output = run(archive, tmp_path, variables='lithk,acabf')
-    row = read_csv(output / 'experiments_GrIS.csv')[0]
+    row = read_csv(output / 'experiments.csv')[0]
     assert row['n_mandatory_expected'] == '2'
     assert row['missing_mandatory'] == 'acabf'
 
 
 def test_a_filter_of_optional_variables_expects_none(archive, tmp_path):
     _inventory, output = run(archive, tmp_path, variables='hfgeoubed')
-    row = read_csv(output / 'experiments_GrIS.csv')[0]
+    row = read_csv(output / 'experiments.csv')[0]
     assert row['n_mandatory_expected'] == '0'
     assert row['n_mandatory_present'] == '0'
 
@@ -272,13 +258,13 @@ def test_a_filter_of_optional_variables_expects_none(archive, tmp_path):
 
 def test_the_variables_filter_skips_other_files_entirely(archive, tmp_path):
     _inventory, output = run(archive, tmp_path, variables='lithk')
-    rows = read_csv(output / 'files_GrIS.csv')
+    rows = read_csv(output / 'files.csv')
     assert [row['variable'] for row in rows] == ['lithk']
 
 
 def test_the_variables_filter_tolerates_spaces(archive, tmp_path):
     _inventory, output = run(archive, tmp_path, variables='lithk, lim')
-    assert len(read_csv(output / 'files_GrIS.csv')) == 2
+    assert len(read_csv(output / 'files.csv')) == 2
 
 
 # --- nothing is written to the archive -------------------------------------
@@ -314,7 +300,7 @@ def test_main_writes_the_reports(archive, tmp_path):
                    '--experiments-root', str(archive),
                    '--output', str(output)])
     assert status == 0
-    assert (output / 'files_GrIS.csv').is_file()
+    assert (output / 'files.csv').is_file()
 
 
 def test_main_reports_a_missing_archive_root_as_a_status(tmp_path):
