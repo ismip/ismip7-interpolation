@@ -5,21 +5,14 @@ This page is for maintainers — those with write access to
 are contributing from a fork, nothing here is yours to do; open the pull
 request and a maintainer will fold it into the next release.
 
-```{note}
-There is no conda-forge package yet. Until a feedstock exists, users install
-from a source checkout as described in {doc}`../user/installation`, and a
-release is just the tag. The rest of this page describes the process once the
-package is on conda-forge.
-```
-
-Modelers get the tools from conda-forge, and conda-forge builds from a tag.
+Users get the tools from conda-forge, and conda-forge builds from a tag.
 Anything on `main` that has not been tagged therefore does not exist as far as
 they are concerned: a remapping you changed, a variable you moved between
 configuration lists, a bug you fixed — all of it sits in this repository being
 invisible to everyone running the tools.
 
-**So tag a release whenever a change reaches `main` that a user would notice.**
-That is deliberately a low bar: a variable moving into or out of
+**So release often: whenever a change reaches `main` that a user would
+notice.** That is deliberately a low bar: a variable moving into or out of
 `bilinear_variables.txt`, `nearest_variables.txt` or
 `mask_missing_variables.txt`; a change to `experiment_sets.txt`; a new or
 altered command-line option; a change to the output tree or the log format; a
@@ -38,10 +31,10 @@ comparable.
 
 ## Cutting a release
 
-1. Bump `version` in `pyproject.toml` following
-   [semantic versioning](https://semver.org/) — patch for a fix, minor for a
-   new option or a new configured variable, major for a change that would give
-   materially different output for the same input — and merge that to `main`.
+1. Check that `version` in `pyproject.toml` is ahead of the last release.
+   The pull requests since then should have bumped it (see
+   [Version numbers](#version-numbers)); if none did, bump it now and merge
+   that to `main`.
 
 2. Draft a new
    [GitHub release](https://github.com/ismip/ismip7-interpolation/releases/new)
@@ -75,6 +68,28 @@ that cannot regrid anything. The same is true of `isschecker`, which ships the
 grids and the data request. Check both on every release that touches
 requirements.
 ```
+
+## Version numbers
+
+Versions follow [semantic versioning](https://semver.org/):
+
+- **patch** (0.1.0 → 0.1.1): a bug fix that changes nothing a correct run
+  relied on.
+- **minor** (0.1.0 → 0.2.0): something new that leaves existing runs as they
+  were — a new command, option or option value, or a dependency range
+  widened.
+- **major** (0.1.0 → 1.0.0): anything that breaks an existing run or changes
+  its numbers — an option removed or renamed, a change to the output tree or
+  the log format, a variable given a different remapping.
+
+While the version is 0.x, a change that would be major bumps the minor
+version instead, as semantic versioning allows.
+
+A pull request with a change a user would notice should bump `version` in
+`pyproject.toml` itself, by the smallest step that covers it. If `main`
+already has an unreleased bump that covers it, leave it. That way `main`
+always carries the version its next release will have, and cutting the
+release is only the tag.
 
 ## The relationship with isschecker
 
