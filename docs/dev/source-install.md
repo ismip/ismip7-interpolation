@@ -1,18 +1,27 @@
 # Installing from source
 
-Users and developers install the same way (see {doc}`../user/installation`);
-the difference for working *on* the package is the `-e` flag, which gives an
-editable install. From a checkout of the repository:
+You only need this to work *on* the package — to test a change that has not
+been released yet, or to develop one. For regridding, install from
+conda-forge instead (see {doc}`../user/installation`).
+
+From a checkout of the repository:
 
 ```bash
+git clone https://github.com/ismip/ismip7-interpolation.git
+cd ismip7-interpolation
 conda env create -f ismip7_interp_env.yml
 conda activate ismip7-interp
 python -m pip install --no-deps --no-build-isolation -e .
 ```
 
 `ismip7_interp_env.yml` installs the dependencies — CDO among them — but not
-the package itself: an `ismip7-interp` environment holds no
-`ismip7-interpolation` package until the `pip install` runs.
+the package itself, so the environment it creates is not the one conda-forge
+gives you: an `ismip7-interp` environment made this way holds no
+`ismip7-interpolation` package until the `pip install` runs. If you already
+have an environment of that name from conda-forge, `conda env create` will
+refuse to create another over it; give this one a different name with
+`conda env create -n ismip7-interp-dev -f ismip7_interp_env.yml` and keep
+both.
 
 ```{warning}
 **Use those pip flags.** All dependencies come from conda-forge, and a plain

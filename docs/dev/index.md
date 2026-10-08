@@ -38,6 +38,9 @@ The repository is laid out like this:
 `docs/`
 : these pages.
 
+If your change is one a user would notice, bump `version` in
+`pyproject.toml` in the same pull request; {doc}`releasing` says by how much.
+
 ```{toctree}
 :maxdepth: 2
 :caption: Contents
