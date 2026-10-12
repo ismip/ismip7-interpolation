@@ -1,7 +1,8 @@
-# The conda environment for using and for working on the package: its
-# dependencies -- CDO among them -- plus the test suite's and the documentation
-# build's, but not the package itself, which is then pip-installed from a
-# source checkout (see "Installation" in the user guide).
+# The conda environment for working on the package: its dependencies -- CDO
+# among them -- plus the test suite's and the documentation build's, but not
+# the package itself, which is then pip-installed from a source checkout (see
+# "Installing from source" in the developer guide).  To use the package
+# instead, install it from conda-forge.
 name: ismip7-interp
 channels:
   - conda-forge

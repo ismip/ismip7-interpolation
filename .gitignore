@@ -9,5 +9,6 @@ docs/_build/
 output/
 inventory/
 .DS_Store
-.claude/
-CLAUDE.md
+.claude/worktrees/
+.claude/settings.local.json
+CLAUDE.local.md
