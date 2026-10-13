@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from ismip7_interp.archive import parse_subset
 from ismip7_interp.cdo import CdoError
 from ismip7_interp.experiment import ExperimentReport
 from ismip7_interp.run_all import RunReport, main, run_all_experiments
@@ -186,3 +187,46 @@ def test_the_variables_filter_reaches_every_experiment(tmp_path, archive,
     run_all_experiments(archive, tmp_path / 'out', 'GrIS', TARGET_RES,
                         variables='lithk')
     assert seen == ['lithk'] * 5
+
+
+# --- the subset selection ---------------------------------------------------
+
+def test_a_group_filter_limits_the_run(tmp_path, archive, processed):
+    run_all_experiments(archive, tmp_path / 'out', 'GrIS', TARGET_RES,
+                        subset=parse_subset('GroupA', None, None, None))
+    assert {path.relative_to(archive).parts[0]
+            for path in processed.seen} == {'GroupA'}
+    assert len(processed.seen) == 3
+
+
+def test_an_experiment_filter_selects_across_groups(tmp_path, archive,
+                                                    processed):
+    run_all_experiments(archive, tmp_path / 'out', 'GrIS', TARGET_RES,
+                        subset=parse_subset(None, None, None, 'C002'))
+    assert {path.name for path in processed.seen} == {'C002'}
+
+
+def test_a_subset_matching_nothing_fails_the_run(tmp_path, archive):
+    subset = parse_subset('GroupC', None, None, None)
+    with pytest.raises(FileNotFoundError, match='no experiments found'):
+        run_all_experiments(archive, tmp_path / 'out', 'GrIS', TARGET_RES,
+                            subset=subset)
+
+
+def test_the_run_log_records_the_subset(tmp_path, archive, processed):
+    subset = parse_subset('GroupA', None, None, 'C001')
+    report = run_all_experiments(archive, tmp_path / 'out', 'GrIS',
+                                 TARGET_RES, subset=subset)
+    text = report.run_log.read_text()
+    assert 'groups:             GroupA\n' in text
+    assert 'experiments:        C001\n' in text
+    assert 'models:             (all)\n' in text
+
+
+def test_main_takes_the_subset_options(tmp_path, archive, processed):
+    status = main(['--domain', 'GrIS', '--target-res', str(TARGET_RES),
+                   '--experiments-root', str(archive),
+                   '--output-root', str(tmp_path / 'out'),
+                   '--groups', 'GroupB', '--experiments', 'C002'])
+    assert status == 0
+    assert [path.name for path in processed.seen] == ['C002']

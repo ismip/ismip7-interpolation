@@ -9,7 +9,12 @@ from datetime import datetime
 from pathlib import Path
 
 from ismip7_interp import __version__, cli
-from ismip7_interp.archive import find_experiments
+from ismip7_interp.archive import (
+    Subset,
+    filter_experiments,
+    find_experiments,
+    parse_subset,
+)
 from ismip7_interp.experiment import _stamp, process_experiment, utc_now
 from ismip7_interp.grids import res_dir_name
 
@@ -54,15 +59,22 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
                         variables: str | None = None,
                         weights_dir: Path | None = None,
                         min_pass_pct: int = DEFAULT_MIN_PASS_PCT,
-                        verbose: bool = False) -> RunReport:
+                        verbose: bool = False,
+                        subset: Subset | None = None) -> RunReport:
     """Regrid every experiment under ``experiments_root``.
 
     A failed experiment is logged and stepped over rather than ending the run.
     The returned report says how many passed; the caller decides what to do
     with a pass rate below ``min_pass_pct``.
+
+    With ``subset`` given, only experiments matching every set filter are
+    processed; the output tree keeps the full group/model/set/experiment
+    paths, so a filtered run is indistinguishable in layout from a full one
+    that found fewer experiments.
     """
     experiments_root = Path(experiments_root).resolve()
-    experiment_dirs = find_experiments(experiments_root)
+    experiment_dirs = filter_experiments(find_experiments(experiments_root),
+                                         experiments_root, subset)
     if not experiment_dirs:
         raise FileNotFoundError(
             f'no experiments found under {experiments_root} -- checked '
@@ -93,7 +105,8 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
 
     report.run_log = _write_run_log(
         Path(output_root) / res_dir_name(domain, target_res) / 'logs', report,
-        domain, target_res, on_unchanged, variables, min_pass_pct, started)
+        domain, target_res, on_unchanged, variables, subset, min_pass_pct,
+        started)
     LOGGER.info('done: %d/%d experiment(s) passed (%d%%) -- output under %s, '
                 'run log at %s', report.n_passed, report.n_total,
                 report.pass_pct,
@@ -104,15 +117,21 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
 
 def _write_run_log(logs_dir: Path, report: RunReport, domain: str,
                    target_res: int, on_unchanged: str, variables: str | None,
-                   min_pass_pct: int, started: datetime) -> Path:
+                   subset: Subset | None, min_pass_pct: int,
+                   started: datetime) -> Path:
     logs_dir.mkdir(parents=True, exist_ok=True)
     run_log = logs_dir / f'run_{started.strftime("%Y%m%dT%H%M%SZ")}.log'
-    lines = [
-        f'domain:             {domain}',
-        f'target_res_m:       {target_res}',
-        f'experiments_root:   {report.experiments_root}',
-        f'on_unchanged:       {on_unchanged}',
-        f'variables:          {variables or "(all)"}',
+    lines = [f'{name + ":":<19} {value}' for name, value in [
+        ('domain', domain),
+        ('target_res_m', target_res),
+        ('experiments_root', report.experiments_root),
+        ('on_unchanged', on_unchanged),
+        ('variables', variables or '(all)'),
+    ]]
+    if subset is not None:
+        lines += [f'{name + ":":<19} {value}'
+                  for name, value in subset.summary().items()]
+    lines += [
         f'min_pass_pct:       {min_pass_pct}',
         f'version:            {__version__}',
         f'started_utc:        {_stamp(started)}',
@@ -146,6 +165,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     cli.add_on_unchanged_argument(parser)
     cli.add_variables_argument(parser)
     cli.add_weights_argument(parser)
+    cli.add_subset_arguments(parser)
     parser.add_argument(
         '--min-pass-pct', type=cli.percentage,
         default=DEFAULT_MIN_PASS_PCT, metavar='PCT',
@@ -161,11 +181,13 @@ def main(argv: list[str] | None = None) -> int:
 
     def work() -> int:
         root = cli.resolve_experiments_root(args.experiments_root, args.domain)
+        subset = parse_subset(args.groups, args.models, args.sets,
+                              args.experiments)
         report = run_all_experiments(
             root, args.output_root, args.domain, args.target_res,
             on_unchanged=args.on_unchanged, variables=args.variables,
             weights_dir=args.weights_dir, min_pass_pct=args.min_pass_pct,
-            verbose=args.verbose > 0)
+            verbose=args.verbose > 0, subset=subset)
         if report.pass_pct < args.min_pass_pct:
             LOGGER.error('pass rate %d%% is below --min-pass-pct %d%%',
                          report.pass_pct, args.min_pass_pct)

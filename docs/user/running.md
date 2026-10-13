@@ -64,11 +64,31 @@ path, group/model/set/experiment, are mirrored into the output.
 ismip7-run-all --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--output-root DIR] \
     [--on-unchanged symlink|copy|skip] [--min-pass-pct PCT] \
-    [--variables VAR1,VAR2,...] [--weights-dir DIR]
+    [--variables VAR1,VAR2,...] [--weights-dir DIR] \
+    [--groups G1,G2,...] [--models M1,M2,...] [--sets SET1,SET2,...] \
+    [--experiments EXP1,EXP2,...]
 ```
 
 A failing experiment is logged and skipped. The run as a whole fails only if
 fewer than `--min-pass-pct` percent of experiments succeed, 60 by default.
+
+### Selecting a subset
+
+Without a filter, every experiment in the archive is regridded. The four
+subset options each take comma-separated names and narrow the run to
+experiments whose group/model/set/experiment path matches:
+
+```bash
+ismip7-run-all --domain AIS --target-res 16000 \
+    --experiments-root ../Models/AIS --output-root ../Regridded \
+    --groups NORCE --models CISM --sets CORE --experiments C011
+```
+
+The filters narrow jointly. The output tree keeps the full
+group/model/set/experiment paths, so a filtered run looks exactly like an
+unfiltered one of a smaller archive, and the run log records the filters
+used. A selection that matches nothing fails the run as "no experiments
+found".
 
 ### Which directories count as experiments
 
@@ -79,11 +99,12 @@ experiments. A directory is processed only when all of these hold:
 |---|---|---|
 | the experiment set is named exactly as configured | CORE/C001 | old_CORE/C001, CORE_old/C001, CESM2-WACCM_CORE/C001 |
 | no directory above it is named old_CORE or CORE_old | CORE/C001 | old_CORE/CORE/C001 |
-| its name is the set's prefix and a three-digit number in range | C001 to C011 | C012, C1, core001 |
+| its name is the set's prefix and a three-digit number in range | C001 to C011 for CORE | C012 for CORE, P001 for CORE, C1, core001 |
 | it holds at least one .nc file directly inside it | CORE/C001/lithk_….nc | CORE/C001/Users/… |
 
-CORE is the only experiment set open today. The sets and their number ranges
-are in ismip7_interp/data/config/experiment_sets.txt.
+The open experiment sets and their number ranges are in
+ismip7_interp/data/config/experiment_sets.txt: CORE (C001-C011),
+ESM (E001-E999) and PPE (P001-P999).
 
 ## Options
 

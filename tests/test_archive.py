@@ -28,9 +28,14 @@ def test_every_domain_has_a_default_archive_root():
 
 def test_configured_experiment_sets():
     sets = experiment_sets()
-    assert sets
+    assert {item.name for item in sets} == {'CORE', 'ESM', 'PPE'}
     core = next(item for item in sets if item.name == 'CORE')
     assert core.prefix == 'C'
+    # Per project decision: ESM = E001-E999, PPE = P001-P999.
+    esm = next(item for item in sets if item.name == 'ESM')
+    assert (esm.prefix, esm.min_number, esm.max_number) == ('E', 1, 999)
+    ppe = next(item for item in sets if item.name == 'PPE')
+    assert (ppe.prefix, ppe.min_number, ppe.max_number) == ('P', 1, 999)
 
 
 @pytest.mark.parametrize('name, expected', [

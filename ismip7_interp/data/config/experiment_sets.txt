@@ -8,7 +8,7 @@
 # experiment directory below it must match `prefix` + a 3-digit
 # number in [min_number, max_number], e.g. C001..C011 for CORE today.
 #
-# CORE is the only currently-open experiment set. Uncomment/add rows
-# once ESM and PPE open up (per project decision, ESM = E001-E999,
-# PPE = P001-P999 -- confirm the actual allowed range before enabling).
+# Per project decision: ESM = E001-E999, PPE = P001-P999.
 CORE C 1 11
+ESM E 1 999
+PPE P 1 999

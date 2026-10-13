@@ -39,12 +39,16 @@ ISMIP7_submissions/GrIS/       <-- --experiments-root
 
 ```bash
 # See what is there before regridding any of it. Reads headers only.
+# Narrow to a subset with --groups, --models, --sets and/or --experiments.
 ismip7-inventory --domain GrIS --target-res 4000 \
     --experiments-root ISMIP7_submissions/GrIS --output inventory
 
-# Regrid every experiment in the archive
+# Regrid every experiment in the archive, or a subset of it
 ismip7-run-all --domain GrIS --target-res 4000 \
     --experiments-root ISMIP7_submissions/GrIS --output-root output
+
+# Regrid one group's one model's one experiment set at a time, e.g.:
+#   ismip7-run-all ... --groups NORCE --models CISM3 --sets CORE
 
 # Regrid one experiment
 ismip7-process-experiment --domain GrIS --target-res 4000 \
