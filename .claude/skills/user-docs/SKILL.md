@@ -54,7 +54,7 @@ The natural mistake, with what it produces (docs/getting-started.md):
 A help string, after #2:
 
 > only these variables, by the name that starts each filename, e.g.
-> lithk,acabf (default: every variable found)
+> --variables lithk acabf (default: every variable found)
 
 A feature in one line, after #2:
 

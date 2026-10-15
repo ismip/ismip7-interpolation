@@ -67,10 +67,9 @@ path, group/model/set/experiment, are mirrored into the output.
 ```bash
 ismip7-run-all --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--output-root DIR] \
-    [--on-unchanged symlink|copy|skip] [--min-pass-pct PCT] \
-    [--variables VAR1 VAR2 ...] [--weights-dir DIR] \
-    [--groups G1 G2 ...] [--models M1 M2 ...] [--sets SET1 SET2 ...] \
-    [--experiments EXP1 EXP2 ...]
+    [--on-unchanged symlink|copy|skip] [--variables VAR1 VAR2 ...] \
+    [--weights-dir DIR] [--groups G1 G2 ...] [--models M1 M2 ...] \
+    [--sets SET1 SET2 ...] [--experiments EXP1 EXP2 ...] [--min-pass-pct PCT]
 ```
 
 A failing experiment is logged and skipped. The run as a whole fails only if
@@ -134,9 +133,10 @@ Asking for a resolution ISMIP7 does not have lists the ones it does:
 no ISMIP7 grid for domain=GrIS resolution=4m (known GrIS resolutions: 1000, 2000, 4000, 5000, 8000, 16000)
 ```
 
-Extra spaces around any name are harmless: `--variables " lithk  acabf "`
-means lithk and acabf. An experiment with none of the requested variables is
-logged and skipped, not counted as a failure, since some variables are
-optional.
+Each name is its own word, split by the shell as usual. Quoting several
+names into one word -- `--variables "lithk acabf"` -- is one variable name
+that matches no file, and so selects nothing. An experiment with none of the
+requested variables is logged and skipped, not counted as a failure, since
+some variables are optional.
 
 Every log records the version, so a regridded archive says what produced it.
