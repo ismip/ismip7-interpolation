@@ -11,9 +11,11 @@ from ismip7_interp.archive import (
     ExperimentSet,
     experiment_rel_path,
     experiment_sets,
+    filter_experiments,
     find_experiments,
     has_nc_files,
     nc_files,
+    parse_subset,
     parse_variable_filter,
     variable_wanted,
 )
@@ -28,9 +30,14 @@ def test_every_domain_has_a_default_archive_root():
 
 def test_configured_experiment_sets():
     sets = experiment_sets()
-    assert sets
+    assert {item.name for item in sets} == {'CORE', 'ESM', 'PPE'}
     core = next(item for item in sets if item.name == 'CORE')
     assert core.prefix == 'C'
+    # Per project decision: ESM = E001-E999, PPE = P001-P999.
+    esm = next(item for item in sets if item.name == 'ESM')
+    assert (esm.prefix, esm.min_number, esm.max_number) == ('E', 1, 999)
+    ppe = next(item for item in sets if item.name == 'PPE')
+    assert (ppe.prefix, ppe.min_number, ppe.max_number) == ('P', 1, 999)
 
 
 @pytest.mark.parametrize('name, expected', [
@@ -266,3 +273,66 @@ def test_experiment_rel_paths_of_two_groups_do_not_collide(tmp_path):
     elsewhere.mkdir()
     assert (experiment_rel_path(first, elsewhere)
             != experiment_rel_path(second, elsewhere))
+
+
+# --- the subset selection ---------------------------------------------------
+
+def test_a_subset_filter_reads_the_last_four_path_components(tmp_path):
+    """The filters line up with group/model/set/experiment, wherever the
+    experiments root sits above them."""
+    experiment = tmp_path / 'archive/GroupA/ModelA/CORE/C001'
+    experiment.mkdir(parents=True)
+    assert parse_subset('GroupA', None, None, None).matches(experiment)
+    assert parse_subset(None, 'ModelA', None, None).matches(experiment)
+    assert parse_subset(None, None, 'CORE', 'C001').matches(experiment)
+    assert not parse_subset('GroupB', None, None, None).matches(experiment)
+    assert not parse_subset(None, None, 'ESM', None).matches(experiment)
+    assert not parse_subset(None, None, None, 'C002').matches(experiment)
+
+
+def test_a_subset_filter_works_when_the_root_is_a_group_directory(tmp_path):
+    """A root at the group level used to pad the path and match nothing."""
+    experiment = tmp_path / 'archive/GrIS/NORCE/CISM/CORE/C001'
+    experiment.mkdir(parents=True)
+    assert parse_subset('NORCE', None, None, None).matches(experiment)
+
+
+def test_parse_subset_without_a_filter_is_none():
+    """No selection means no subset, not an always-true empty one."""
+    assert parse_subset(None, None, None, None) is None
+    assert parse_subset('', '', '', '') is None
+
+
+def test_a_subset_summary_records_the_names():
+    summary = parse_subset('B,A', None, None, 'C001').summary()
+    assert summary['groups'] == 'A,B'
+    assert summary['experiments'] == 'C001'
+    assert summary['models'] == '(all)'
+
+
+def test_filter_experiments_keeps_only_the_selection(tmp_path):
+    first = tmp_path / 'GroupA/ModelA/CORE/C001'
+    second = tmp_path / 'GroupB/ModelA/CORE/C001'
+    assert filter_experiments([first, second],
+                              parse_subset('GroupA', None, None,
+                                           None)) == [first]
+    # Without a selection, everything passes untouched.
+    assert filter_experiments([first, second], None) == [first, second]
+
+
+def test_filter_experiments_raises_for_an_unmatched_name(tmp_path):
+    """A typo would otherwise silently leave one experiment unprocessed."""
+    first = tmp_path / 'GroupA/ModelA/CORE/C001'
+    second = tmp_path / 'GroupB/ModelA/CORE/C001'
+    subset = parse_subset('GroupA,AWl', None, None, None)
+    with pytest.raises(ValueError, match='--groups AWl'):
+        filter_experiments([first, second], subset)
+
+
+def test_filter_experiments_accepts_every_name_that_matched_somewhere(
+        tmp_path):
+    """A name matching one experiment keeps the rest of the selection."""
+    first = tmp_path / 'GroupA/ModelA/CORE/C001'
+    second = tmp_path / 'GroupB/ModelA/CORE/C001'
+    subset = parse_subset(None, None, None, 'C001')
+    assert filter_experiments([first, second], subset) == [first, second]

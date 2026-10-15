@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import csv
+from pathlib import Path
 
 import pytest
 
+from ismip7_interp.archive import parse_subset
 from ismip7_interp.grids import gdf_dims, gdf_path
 from ismip7_interp.inventory import (
     ALREADY_AT_TARGET,
@@ -308,3 +310,128 @@ def test_main_reports_a_missing_archive_root_as_a_status(tmp_path):
                    '--experiments-root', str(tmp_path / 'absent'),
                    '--output', str(tmp_path / 'report')])
     assert status == 1
+
+
+def test_main_without_filters_writes_no_subset_lines(archive, tmp_path):
+    """A plain run must not warn about a selection or record one.
+
+    Checked through main(), not inventory_archive: only the command line
+    shows whether an absent selection is turned into an empty one first.
+    """
+    output = tmp_path / 'report'
+    status = main(['--domain', 'GrIS', '--target-res', str(TARGET_RES),
+                   '--experiments-root', str(archive),
+                   '--output', str(output)])
+    assert status == 0
+    text = (output / 'summary.txt').read_text()
+    assert 'groups:' not in text
+    assert 'experiments:' not in text
+
+
+def test_main_reports_an_unmatched_name_as_a_status(multi_archive, tmp_path):
+    """A typo must end the scan, not silently scan less of the archive."""
+    output = tmp_path / 'report'
+    status = main(['--domain', 'GrIS', '--target-res', str(TARGET_RES),
+                   '--experiments-root', str(multi_archive),
+                   '--output', str(output),
+                   '--groups', 'NORCE,AWl'])
+    assert status == 1
+
+
+# --- the subset selection ---------------------------------------------------
+
+@pytest.fixture
+def multi_archive(tmp_path, make_archive):
+    """Four experiments across two groups, two models, one set."""
+    root = tmp_path / 'archive'
+    make_archive(root, {
+        'NORCE/CISM/CORE/C011': ['lithk_a.nc'],
+        'NORCE/CISM/CORE/C007': ['lithk_b.nc'],
+        'NORCE/PISM/CORE/C011': ['lithk_c.nc'],
+        'AWI/PISM/CORE/C011': ['lithk_d.nc'],
+    })
+    return root
+
+
+def _experiments(inventory, archive):
+    return {row.experiment.relative_to(archive)
+            for row in inventory.experiments}
+
+
+def test_a_group_filter_keeps_only_that_group(multi_archive, tmp_path):
+    subset = parse_subset('NORCE', None, None, None)
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert _experiments(inventory, multi_archive) == {
+        Path('NORCE/CISM/CORE/C011'), Path('NORCE/CISM/CORE/C007'),
+        Path('NORCE/PISM/CORE/C011')}
+
+
+def test_a_model_filter_keeps_every_group_with_that_model(multi_archive,
+                                                          tmp_path):
+    subset = parse_subset(None, 'PISM', None, None)
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert _experiments(inventory, multi_archive) == {
+        Path('NORCE/PISM/CORE/C011'), Path('AWI/PISM/CORE/C011')}
+
+
+def test_an_experiment_set_filter_alone_selects_everything(multi_archive,
+                                                           tmp_path):
+    subset = parse_subset(None, None, 'CORE', None)
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert len(inventory.experiments) == 4
+
+
+def test_an_experiment_filter_selects_across_groups(multi_archive, tmp_path):
+    subset = parse_subset(None, None, None, 'C007')
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert _experiments(inventory, multi_archive) == {
+        Path('NORCE/CISM/CORE/C007')}
+
+
+def test_several_names_in_one_filter(multi_archive, tmp_path):
+    subset = parse_subset(None, None, None, 'C007,C011')
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert len(inventory.experiments) == 4
+
+
+def test_filters_narrow_jointly(multi_archive, tmp_path):
+    subset = parse_subset('AWI', None, None, 'C007')
+    inventory, _ = run(multi_archive, tmp_path, subset=subset)
+    assert inventory.experiments == []
+
+
+def test_a_filtered_scan_still_writes_every_report(multi_archive, tmp_path):
+    subset = parse_subset('AWI', None, None, None)
+    _inventory, output = run(multi_archive, tmp_path, subset=subset)
+    for name in ('files.csv', 'experiments.csv', 'summary.txt'):
+        assert (output / name).is_file()
+
+
+def test_the_summary_records_the_subset(multi_archive, tmp_path):
+    subset = parse_subset('NORCE', 'CISM', None, 'C011')
+    _inventory, output = run(multi_archive, tmp_path, subset=subset)
+    text = (output / 'summary.txt').read_text()
+    assert 'groups:             NORCE\n' in text
+    assert 'models:             CISM\n' in text
+    assert 'sets:               (all)\n' in text
+    assert 'experiments:        C011\n' in text
+
+
+def test_the_unfiltered_summary_has_no_subset_lines(multi_archive, tmp_path):
+    _inventory, output = run(multi_archive, tmp_path)
+    text = (output / 'summary.txt').read_text()
+    assert 'groups:' not in text
+    assert 'experiments:' not in text
+
+
+def test_main_takes_the_subset_options(multi_archive, tmp_path):
+    output = tmp_path / 'report'
+    status = main(['--domain', 'GrIS', '--target-res', str(TARGET_RES),
+                   '--experiments-root', str(multi_archive),
+                   '--output', str(output),
+                   '--groups', 'NORCE', '--models', 'CISM'])
+    assert status == 0
+    rows = read_csv(output / 'experiments.csv')
+    assert {row['experiment'] for row in rows} == {
+        str(multi_archive / 'NORCE/CISM/CORE/C011'),
+        str(multi_archive / 'NORCE/CISM/CORE/C007')}

@@ -100,6 +100,17 @@ A failing experiment is logged and skipped. The run as a whole fails only if
 fewer than `--min-pass-pct` percent (60 by default) succeed. See
 {doc}`user/running`.
 
+To regrid only part of the archive, name the groups, models, experiment sets
+or experiments you want; the filters can be combined:
+
+```bash
+ismip7-run-all --domain GrIS --target-res 4000 \
+    --experiments-root ISMIP7_submissions/GrIS --output-root output \
+    --groups NORCE --models CISM3 --sets CORE --experiments C007
+```
+
+The output tree keeps the full group/model/set/experiment paths either way.
+
 ## Regrid one experiment, or one file
 
 ```bash

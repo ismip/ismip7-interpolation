@@ -18,8 +18,11 @@ from pathlib import Path
 
 from ismip7_interp import __version__, cli
 from ismip7_interp.archive import (
+    Subset,
+    filter_experiments,
     find_experiments,
     nc_files,
+    parse_subset,
     parse_variable_filter,
     variable_wanted,
 )
@@ -201,7 +204,8 @@ def scan_experiment(experiment_dir: Path, domain: str, target_points: int,
 
 def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
                       target_res: int,
-                      variables: str | None = None) -> Inventory:
+                      variables: str | None = None,
+                      subset: Subset | None = None) -> Inventory:
     """Scan an archive, writing the two CSVs and the summary.
 
     With ``variables`` given, every other file is skipped outright rather than
@@ -209,6 +213,9 @@ def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
     report.  Mandatory-variable completeness is narrowed to match: only
     requested variables that are also mandatory are expected, so a filtered
     scan does not report the variables it never looked at as missing.
+
+    With ``subset`` given, only experiments matching every set filter are
+    scanned; the reports keep the full group/model/set/experiment paths.
     """
     experiments_root = Path(experiments_root).resolve()
     output_dir = Path(output_dir)
@@ -221,8 +228,13 @@ def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
         expected_mandatory = frozenset(expected_mandatory & wanted)
 
     inventory = Inventory()
-    for number, experiment_dir in enumerate(
-            find_experiments(experiments_root), start=1):
+    experiment_dirs = find_experiments(experiments_root)
+    selected = filter_experiments(experiment_dirs, subset)
+    if subset is not None and not selected:
+        LOGGER.warning('the subset selection matched none of the %d '
+                       'experiment(s) found under %s', len(experiment_dirs),
+                       experiments_root)
+    for number, experiment_dir in enumerate(selected, start=1):
         LOGGER.info('[%d] scanning %s', number, experiment_dir)
         rows, summary = scan_experiment(experiment_dir, domain, target_points,
                                         target_res, expected_mandatory, wanted)
@@ -230,7 +242,7 @@ def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
         inventory.experiments.append(summary)
 
     _write_inventory(inventory, output_dir, experiments_root, domain,
-                     target_res, variables, started)
+                     target_res, variables, subset, started)
     counts = inventory.status_counts
     LOGGER.info('done: %d experiment(s) scanned (%d already at target, '
                 '%d need regrid, %d unknown grid, %d no spatial data) -- '
@@ -248,7 +260,8 @@ def _grid_points(domain: str, res_m: int) -> int:
 
 def _write_inventory(inventory: Inventory, output_dir: Path,
                      experiments_root: Path, domain: str, target_res: int,
-                     variables: str | None, started: datetime) -> None:
+                     variables: str | None, subset: Subset | None,
+                     started: datetime) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     # newline='' and csv.DictWriter, not manual string joining: an archive path
     # is free to contain a comma, and one that did would silently shift every
@@ -265,19 +278,24 @@ def _write_inventory(inventory: Inventory, output_dir: Path,
             writer.writerow(row.as_row())
 
     counts = inventory.status_counts
-    (output_dir / 'summary.txt').write_text('\n'.join([
-        f'domain:             {domain}',
-        f'target_res_m:       {target_res}',
-        f'experiments_root:   {experiments_root}',
-        f'variables:          {variables or "(all)"}',
-        f'version:            {__version__}',
-        f'scanned_utc:        {_stamp(started)}',
-        f'experiments_total:  {len(inventory.experiments)}',
-        f'already_at_target:  {counts[ALREADY_AT_TARGET]}',
-        f'needs_regrid:       {counts[NEEDS_REGRID]}',
-        f'unknown_grid:       {counts[UNKNOWN_GRID]}',
-        f'no_spatial_data:    {counts[NO_SPATIAL_DATA]}',
-    ]) + '\n')
+    fields = {'domain': domain, 'target_res_m': target_res,
+              'experiments_root': experiments_root,
+              'variables': variables or '(all)'}
+    if subset is not None:
+        fields.update(subset.summary())
+    fields.update({
+        'version': __version__,
+        'scanned_utc': _stamp(started),
+        'experiments_total': len(inventory.experiments),
+        'already_at_target': counts[ALREADY_AT_TARGET],
+        'needs_regrid': counts[NEEDS_REGRID],
+        'unknown_grid': counts[UNKNOWN_GRID],
+        'no_spatial_data': counts[NO_SPATIAL_DATA],
+    })
+    # The colon is part of the padded label, so the values line up in one
+    # column even when a value such as an experiments root is long.
+    (output_dir / 'summary.txt').write_text(''.join(
+        f'{name + ":":<19} {value}\n' for name, value in fields.items()))
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -295,6 +313,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help='where to write files.csv, experiments.csv and summary.txt '
              '(default: inventory/GrIS or inventory/AIS)')
     cli.add_variables_argument(parser)
+    cli.add_subset_arguments(parser)
     return parser.parse_args(argv)
 
 
@@ -306,8 +325,10 @@ def main(argv: list[str] | None = None) -> int:
     def work() -> int:
         root = cli.resolve_experiments_root(args.experiments_root, args.domain)
         output = args.output or default_output_dir(args.domain)
+        subset = parse_subset(args.groups, args.models, args.sets,
+                              args.experiments)
         inventory_archive(root, output, args.domain, args.target_res,
-                          variables=args.variables)
+                          variables=args.variables, subset=subset)
         return 0
 
     return cli.run_main(work)

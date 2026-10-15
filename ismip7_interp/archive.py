@@ -172,6 +172,114 @@ def variable_wanted(variable: str, wanted: frozenset[str] | None) -> bool:
     return wanted is None or variable in wanted
 
 
+@dataclass(frozen=True)
+class Subset:
+    """Which groups, models, experiment sets and experiments to keep.
+
+    Each part is ``None`` for "everything", or a set of exact names.  An
+    experiment passes when every filter that is set matches the
+    corresponding component of its group/model/experiment-set/experiment
+    path, so the filters narrow jointly.
+    """
+
+    groups: frozenset[str] | None = None
+    models: frozenset[str] | None = None
+    sets: frozenset[str] | None = None
+    experiments: frozenset[str] | None = None
+
+    #: The path components each field filters, in the order they occur.
+    _LEVELS = ('groups', 'models', 'sets', 'experiments')
+
+    def matches(self, experiment_dir: Path) -> bool:
+        """Return whether one experiment passes every filter that is set.
+
+        The filters are read off the last four components of the experiment's
+        path, which ``find_experiments`` guarantees are
+        group/model/experiment-set/experiment: it only returns directories
+        directly inside a set directory.  Working from the path tail rather
+        than a position relative to the experiments root is what makes
+        ``--groups`` work when the root is a group directory.
+        """
+        parts = Path(experiment_dir).parts[-EXPERIMENT_PATH_DEPTH:]
+        # Right-aligned: an experiment reached through a shorter path, e.g. a
+        # root sitting at the model level, still lines each name up with its
+        # own filter, with the missing leading levels simply unchecked.
+        for level, part in zip(reversed(self._LEVELS), reversed(parts)):
+            wanted = getattr(self, level)
+            if wanted is not None and part not in wanted:
+                return False
+        return True
+
+    def summary(self) -> dict[str, str]:
+        """Return each filter as a value for a report line, '(all)' if unset."""
+        lines = {}
+        for level in self._LEVELS:
+            wanted = getattr(self, level)
+            lines[level] = ('(all)' if wanted is None
+                            else ','.join(sorted(wanted)))
+        return lines
+
+
+def parse_subset(groups: str | None, models: str | None, sets: str | None,
+                 experiments: str | None) -> Subset | None:
+    """Turn the ``--groups``/``--models``/``--sets``/``--experiments`` values
+    into a :class:`Subset`, or ``None`` when no filter was given.
+
+    Like ``--variables``, each value is comma-separated names with
+    surrounding whitespace stripped.  ``None`` -- rather than a ``Subset``
+    with every part unset -- is what keeps an unfiltered run from logging a
+    no-match warning or writing ``(all)`` lines into ``summary.txt``.
+    """
+    subset = Subset(parse_variable_filter(groups),
+                    parse_variable_filter(models),
+                    parse_variable_filter(sets),
+                    parse_variable_filter(experiments))
+    if all(getattr(subset, level) is None for level in Subset._LEVELS):
+        return None
+    return subset
+
+
+#: The option each :class:`Subset` level was given on the command line, for
+#: error messages that name the option the user typed.
+_LEVEL_OPTIONS = {'groups': '--groups', 'models': '--models',
+                  'sets': '--sets', 'experiments': '--experiments'}
+
+
+def filter_experiments(experiment_dirs: list[Path],
+                       subset: Subset | None) -> list[Path]:
+    """Keep only the experiments the subset selection asks for.
+
+    The archive walk itself is not pruned: an inventory or run reads far more
+    per experiment than the walk costs, and the found directories must stay
+    in their stable sorted order.
+
+    A requested name that matched no experiment raises :class:`ValueError`.
+    On a long run, a typo such as ``--groups NORCE,AWl`` would otherwise
+    silently drop AWl and regrid without it.
+    """
+    if subset is None:
+        return experiment_dirs
+    selected = [directory for directory in experiment_dirs
+                if subset.matches(directory)]
+    seen: dict[str, set[str]] = {level: set() for level in Subset._LEVELS}
+    for directory in experiment_dirs:
+        parts = Path(directory).parts[-EXPERIMENT_PATH_DEPTH:]
+        for level, part in zip(reversed(Subset._LEVELS), reversed(parts)):
+            seen[level].add(part)
+    unmatched = []
+    for level in Subset._LEVELS:
+        wanted = getattr(subset, level)
+        if wanted is None:
+            continue
+        missing = sorted(wanted - seen[level])
+        if missing:
+            unmatched.append(f'{_LEVEL_OPTIONS[level]} {",".join(missing)}')
+    if unmatched:
+        raise ValueError(
+            'no experiment matches the selection: ' + '; '.join(unmatched))
+    return selected
+
+
 def experiment_rel_path(experiment_dir: Path,
                         experiments_root: Path | None) -> Path:
     """Return the path to mirror in the output for one experiment.

@@ -2,7 +2,9 @@
 
 ```bash
 ismip7-inventory --domain GrIS --target-res 4000 \
-    [--experiments-root ROOT] [--output DIR] [--variables VAR1,VAR2,...]
+    [--experiments-root ROOT] [--output DIR] [--variables VAR1,VAR2,...] \
+    [--groups G1,G2,...] [--models M1,M2,...] [--sets SET1,SET2,...] \
+    [--experiments EXP1,EXP2,...]
 ```
 
 A read-only report on what an archive holds. Nothing is regridded and no
@@ -25,7 +27,7 @@ domain:             GrIS
 target_res_m:       4000
 experiments_root:   /nird/datalake/NS5011K/ISMIP/ISMIP7/GrIS/ISMIP7_output/ISMIP7_submissions/GrIS
 variables:          (all)
-version:            0.1.0
+version:            0.2.0
 scanned_utc:        2026-09-11T14:02:00Z
 experiments_total:  44
 already_at_target:  6
@@ -62,6 +64,25 @@ source grid points. It ignores header overhead, compression and data types,
 so treat it as a ballpark for planning disk. A file with no spatial grid
 keeps its actual size; a file on an unknown grid gets NA and is left out of
 the experiment's total.
+
+## Selecting a subset
+
+Without a filter, every experiment in the archive is scanned. The four
+subset options each take comma-separated names and narrow the scan to
+experiments whose group/model/set/experiment path matches:
+
+```bash
+ismip7-inventory --domain AIS --target-res 16000 \
+    --experiments-root ../Models/AIS --output ../Regridding_test \
+    --groups NORCE --models CISM --sets CORE --experiments C011
+```
+
+The filters narrow jointly, and the reports keep the full
+group/model/set/experiment paths, so a filtered scan reads exactly like an
+unfiltered one of a smaller archive. The summary records the filters used.
+A name that matches no experiment is an error naming it, so a typo cannot
+silently scan less of the archive; a selection whose filters match nothing
+jointly scans nothing and writes an empty report.
 
 ## Mandatory variables
 
