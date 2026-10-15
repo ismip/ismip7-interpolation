@@ -61,7 +61,7 @@ class ExperimentReport:
 def process_experiment(experiment_dir: Path, output_root: Path, domain: str,
                        target_res: int, experiments_root: Path | None = None,
                        on_unchanged: str = 'symlink',
-                       variables: list[str] | None = None,
+                       variables: str | None = None,
                        weights_dir: Path | None = None,
                        verbose: bool = False) -> ExperimentReport:
     """Regrid every NetCDF file in one experiment directory.
@@ -127,7 +127,7 @@ def process_experiment(experiment_dir: Path, output_root: Path, domain: str,
 
 
 def _write_log(logs_dir: Path, report: ExperimentReport, domain: str,
-               target_res: int, on_unchanged: str, variables: list[str] | None,
+               target_res: int, on_unchanged: str, variables: str | None,
                started: datetime) -> Path:
     logs_dir.mkdir(parents=True, exist_ok=True)
     name = str(report.rel_path).replace('/', '_')
@@ -138,7 +138,7 @@ def _write_log(logs_dir: Path, report: ExperimentReport, domain: str,
         f'domain:         {domain}',
         f'target_res_m:   {target_res}',
         f'on_unchanged:   {on_unchanged}',
-        f"variables:      {' '.join(variables) if variables else '(all)'}",
+        f'variables:      {variables or "(all)"}',
         f'version:        {__version__}',
         f'started_utc:    {_stamp(started)}',
         f'finished_utc:   {_stamp(utc_now())}',
@@ -160,15 +160,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                'without that, the last four components of its path '
                '(group/model/set/experiment). An experiment with none of '
                'the requested --variables is not an error: some variables '
-               'are optional. --variables takes one or more variable names '
-               'and must come after EXPERIMENT_DIR and OUTPUT_ROOT, which '
-               'it would otherwise swallow as variable names.')
+               'are optional.')
     cli.add_common_arguments(parser)
     cli.add_grid_arguments(parser)
     cli.add_experiments_root_argument(parser, has_default=False)
     cli.add_on_unchanged_argument(parser)
-    cli.add_weights_argument(parser)
     cli.add_variables_argument(parser)
+    cli.add_weights_argument(parser)
     parser.add_argument('experiment_dir', type=Path, metavar='EXPERIMENT_DIR',
                         help='the experiment directory to regrid, e.g. '
                              '.../GrIS/NORCE/CISM3/CORE/C007')

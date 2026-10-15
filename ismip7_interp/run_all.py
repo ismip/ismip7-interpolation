@@ -56,7 +56,7 @@ class RunReport:
 
 def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
                         target_res: int, on_unchanged: str = 'symlink',
-                        variables: list[str] | None = None,
+                        variables: str | None = None,
                         weights_dir: Path | None = None,
                         min_pass_pct: int = DEFAULT_MIN_PASS_PCT,
                         verbose: bool = False,
@@ -123,7 +123,7 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
 
 
 def _write_run_log(logs_dir: Path, report: RunReport, domain: str,
-                   target_res: int, on_unchanged: str, variables: list[str] | None,
+                   target_res: int, on_unchanged: str, variables: str | None,
                    subset: Subset | None, min_pass_pct: int,
                    started: datetime) -> Path:
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -133,7 +133,7 @@ def _write_run_log(logs_dir: Path, report: RunReport, domain: str,
         ('target_res_m', target_res),
         ('experiments_root', report.experiments_root),
         ('on_unchanged', on_unchanged),
-        ('variables', ' '.join(variables) if variables else '(all)'),
+        ('variables', variables or '(all)'),
     ]
     if subset is not None:
         fields += list(subset.summary().items())

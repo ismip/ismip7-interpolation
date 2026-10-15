@@ -204,7 +204,7 @@ def scan_experiment(experiment_dir: Path, domain: str, target_points: int,
 
 def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
                       target_res: int,
-                      variables: list[str] | None = None,
+                      variables: str | None = None,
                       subset: Subset | None = None) -> Inventory:
     """Scan an archive, writing the two CSVs and the summary.
 
@@ -260,7 +260,7 @@ def _grid_points(domain: str, res_m: int) -> int:
 
 def _write_inventory(inventory: Inventory, output_dir: Path,
                      experiments_root: Path, domain: str, target_res: int,
-                     variables: list[str] | None, subset: Subset | None,
+                     variables: str | None, subset: Subset | None,
                      started: datetime) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     # newline='' and csv.DictWriter, not manual string joining: an archive path
@@ -280,7 +280,7 @@ def _write_inventory(inventory: Inventory, output_dir: Path,
     counts = inventory.status_counts
     fields = {'domain': domain, 'target_res_m': target_res,
               'experiments_root': experiments_root,
-              'variables': ' '.join(variables) if variables else '(all)'}
+              'variables': variables or '(all)'}
     if subset is not None:
         fields.update(subset.summary())
     fields.update({

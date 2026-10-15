@@ -2,9 +2,9 @@
 
 ```bash
 ismip7-inventory --domain GrIS --target-res 4000 \
-    [--experiments-root ROOT] [--output DIR] [--variables VAR1 VAR2 ...] \
-    [--groups G1 G2 ...] [--models M1 M2 ...] [--sets SET1 SET2 ...] \
-    [--experiments EXP1 EXP2 ...]
+    [--experiments-root ROOT] [--output DIR] [--variables VAR1,VAR2,...] \
+    [--groups G1,G2,...] [--models M1,M2,...] [--sets SET1,SET2,...] \
+    [--experiments EXP1,EXP2,...]
 ```
 
 A read-only report on what an archive holds. Nothing is regridded and no
@@ -68,7 +68,7 @@ the experiment's total.
 ## Selecting a subset
 
 Without a filter, every experiment in the archive is scanned. The four
-subset options each take one or more names and narrow the scan to
+subset options each take comma-separated names and narrow the scan to
 experiments whose group/model/set/experiment path matches:
 
 ```bash

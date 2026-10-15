@@ -176,7 +176,7 @@ def test_unknown_grid_wins_over_needs_regrid(tmp_path, write_gridded):
 
 
 def test_status_no_spatial_data(archive, tmp_path):
-    inventory, _output = run(archive, tmp_path, variables=['lim'])
+    inventory, _output = run(archive, tmp_path, variables='lim')
     assert inventory.experiments[0].regrid_status == NO_SPATIAL_DATA
 
 
@@ -243,14 +243,14 @@ def test_a_substring_of_another_name_is_not_confused_with_it(tmp_path,
 def test_a_filtered_scan_only_expects_the_variables_it_looked_at(archive,
                                                                  tmp_path):
     """Otherwise every variable it never opened is reported as missing."""
-    _inventory, output = run(archive, tmp_path, variables=['lithk', 'acabf'])
+    _inventory, output = run(archive, tmp_path, variables='lithk,acabf')
     row = read_csv(output / 'experiments.csv')[0]
     assert row['n_mandatory_expected'] == '2'
     assert row['missing_mandatory'] == 'acabf'
 
 
 def test_a_filter_of_optional_variables_expects_none(archive, tmp_path):
-    _inventory, output = run(archive, tmp_path, variables=['hfgeoubed'])
+    _inventory, output = run(archive, tmp_path, variables='hfgeoubed')
     row = read_csv(output / 'experiments.csv')[0]
     assert row['n_mandatory_expected'] == '0'
     assert row['n_mandatory_present'] == '0'
@@ -259,14 +259,13 @@ def test_a_filter_of_optional_variables_expects_none(archive, tmp_path):
 # --- filtering -------------------------------------------------------------
 
 def test_the_variables_filter_skips_other_files_entirely(archive, tmp_path):
-    _inventory, output = run(archive, tmp_path, variables=['lithk'])
+    _inventory, output = run(archive, tmp_path, variables='lithk')
     rows = read_csv(output / 'files.csv')
     assert [row['variable'] for row in rows] == ['lithk']
 
 
 def test_the_variables_filter_tolerates_spaces(archive, tmp_path):
-    _inventory, output = run(archive, tmp_path,
-                             variables=[' lithk ', ' lim '])
+    _inventory, output = run(archive, tmp_path, variables='lithk, lim')
     assert len(read_csv(output / 'files.csv')) == 2
 
 
@@ -335,7 +334,7 @@ def test_main_reports_an_unmatched_name_as_a_status(multi_archive, tmp_path):
     status = main(['--domain', 'GrIS', '--target-res', str(TARGET_RES),
                    '--experiments-root', str(multi_archive),
                    '--output', str(output),
-                   '--groups', 'NORCE', 'AWl'])
+                   '--groups', 'NORCE,AWl'])
     assert status == 1
 
 
@@ -360,7 +359,7 @@ def _experiments(inventory, archive):
 
 
 def test_a_group_filter_keeps_only_that_group(multi_archive, tmp_path):
-    subset = parse_subset(['NORCE'], None, None, None)
+    subset = parse_subset('NORCE', None, None, None)
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert _experiments(inventory, multi_archive) == {
         Path('NORCE/CISM/CORE/C011'), Path('NORCE/CISM/CORE/C007'),
@@ -369,7 +368,7 @@ def test_a_group_filter_keeps_only_that_group(multi_archive, tmp_path):
 
 def test_a_model_filter_keeps_every_group_with_that_model(multi_archive,
                                                           tmp_path):
-    subset = parse_subset(None, ['PISM'], None, None)
+    subset = parse_subset(None, 'PISM', None, None)
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert _experiments(inventory, multi_archive) == {
         Path('NORCE/PISM/CORE/C011'), Path('AWI/PISM/CORE/C011')}
@@ -377,39 +376,39 @@ def test_a_model_filter_keeps_every_group_with_that_model(multi_archive,
 
 def test_an_experiment_set_filter_alone_selects_everything(multi_archive,
                                                            tmp_path):
-    subset = parse_subset(None, None, ['CORE'], None)
+    subset = parse_subset(None, None, 'CORE', None)
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert len(inventory.experiments) == 4
 
 
 def test_an_experiment_filter_selects_across_groups(multi_archive, tmp_path):
-    subset = parse_subset(None, None, None, ['C007'])
+    subset = parse_subset(None, None, None, 'C007')
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert _experiments(inventory, multi_archive) == {
         Path('NORCE/CISM/CORE/C007')}
 
 
 def test_several_names_in_one_filter(multi_archive, tmp_path):
-    subset = parse_subset(None, None, None, ['C007', 'C011'])
+    subset = parse_subset(None, None, None, 'C007,C011')
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert len(inventory.experiments) == 4
 
 
 def test_filters_narrow_jointly(multi_archive, tmp_path):
-    subset = parse_subset(['AWI'], None, None, ['C007'])
+    subset = parse_subset('AWI', None, None, 'C007')
     inventory, _ = run(multi_archive, tmp_path, subset=subset)
     assert inventory.experiments == []
 
 
 def test_a_filtered_scan_still_writes_every_report(multi_archive, tmp_path):
-    subset = parse_subset(['AWI'], None, None, None)
+    subset = parse_subset('AWI', None, None, None)
     _inventory, output = run(multi_archive, tmp_path, subset=subset)
     for name in ('files.csv', 'experiments.csv', 'summary.txt'):
         assert (output / name).is_file()
 
 
 def test_the_summary_records_the_subset(multi_archive, tmp_path):
-    subset = parse_subset(['NORCE'], ['CISM'], None, ['C011'])
+    subset = parse_subset('NORCE', 'CISM', None, 'C011')
     _inventory, output = run(multi_archive, tmp_path, subset=subset)
     text = (output / 'summary.txt').read_text()
     assert 'groups:             NORCE\n' in text

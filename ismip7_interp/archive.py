@@ -155,16 +155,16 @@ def find_experiments(root: Path) -> list[Path]:
     return sorted(found)
 
 
-def parse_variable_filter(names: list[str] | None) -> frozenset[str] | None:
+def parse_variable_filter(text: str | None) -> frozenset[str] | None:
     """Turn a ``--variables`` value into a set of names, or ``None`` for all.
 
     Surrounding whitespace is stripped from each name, so that
-    ``--variables " lithk "`` means what it looks like it means.
+    ``--variables "lithk, acabf"`` means what it looks like it means.
     """
-    if names is None:
+    if text is None:
         return None
-    found = frozenset(name.strip() for name in names if name.strip())
-    return found or None
+    names = frozenset(name.strip() for name in text.split(',') if name.strip())
+    return names or None
 
 
 def variable_wanted(variable: str, wanted: frozenset[str] | None) -> bool:
@@ -216,17 +216,16 @@ class Subset:
         for level in self._LEVELS:
             wanted = getattr(self, level)
             lines[level] = ('(all)' if wanted is None
-                            else ' '.join(sorted(wanted)))
+                            else ','.join(sorted(wanted)))
         return lines
 
 
-def parse_subset(groups: list[str] | None, models: list[str] | None,
-                 sets: list[str] | None,
-                 experiments: list[str] | None) -> Subset | None:
+def parse_subset(groups: str | None, models: str | None, sets: str | None,
+                 experiments: str | None) -> Subset | None:
     """Turn the ``--groups``/``--models``/``--sets``/``--experiments`` values
     into a :class:`Subset`, or ``None`` when no filter was given.
 
-    Each value is the list of names argparse collected for one option, with
+    Like ``--variables``, each value is comma-separated names with
     surrounding whitespace stripped.  ``None`` -- rather than a ``Subset``
     with every part unset -- is what keeps an unfiltered run from logging a
     no-match warning or writing ``(all)`` lines into ``summary.txt``.
@@ -255,7 +254,7 @@ def filter_experiments(experiment_dirs: list[Path],
     in their stable sorted order.
 
     A requested name that matched no experiment raises :class:`ValueError`.
-    On a long run, a typo such as ``--groups NORCE AWl`` would otherwise
+    On a long run, a typo such as ``--groups NORCE,AWl`` would otherwise
     silently drop AWl and regrid without it.
     """
     if subset is None:
@@ -274,7 +273,7 @@ def filter_experiments(experiment_dirs: list[Path],
             continue
         missing = sorted(wanted - seen[level])
         if missing:
-            unmatched.append(f'{_LEVEL_OPTIONS[level]} {", ".join(missing)}')
+            unmatched.append(f'{_LEVEL_OPTIONS[level]} {",".join(missing)}')
     if unmatched:
         raise ValueError(
             'no experiment matches the selection: ' + '; '.join(unmatched))
