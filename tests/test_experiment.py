@@ -112,7 +112,7 @@ def test_the_variables_filter_selects_files(tmp_path, experiment,
     report = process_experiment(experiment, tmp_path / 'out', 'GrIS',
                                 TARGET_RES,
                                 experiments_root=tmp_path / 'archive',
-                                variables='lithk')
+                                variables=['lithk'])
     assert [name for _status, name in report.files] == [f'lithk_{NAME_TAIL}']
 
 
@@ -121,7 +121,7 @@ def test_the_variables_filter_tolerates_spaces(tmp_path, experiment,
     report = process_experiment(experiment, tmp_path / 'out', 'GrIS',
                                 TARGET_RES,
                                 experiments_root=tmp_path / 'archive',
-                                variables='lithk, acabf')
+                                variables=[' lithk ', ' acabf '])
     assert report.n_total == 2
 
 
@@ -131,7 +131,7 @@ def test_no_matching_variables_is_not_a_failure(tmp_path, experiment,
     report = process_experiment(experiment, tmp_path / 'out', 'GrIS',
                                 TARGET_RES,
                                 experiments_root=tmp_path / 'archive',
-                                variables='orog')
+                                variables=['orog'])
     assert report.succeeded
     assert report.n_total == 0
 
@@ -142,7 +142,7 @@ def test_a_log_is_written_even_when_nothing_matched(tmp_path, experiment,
     report = process_experiment(experiment, tmp_path / 'out', 'GrIS',
                                 TARGET_RES,
                                 experiments_root=tmp_path / 'archive',
-                                variables='orog')
+                                variables=['orog'])
     assert report.log_file.is_file()
     assert 'files_total:    0' in report.log_file.read_text()
 

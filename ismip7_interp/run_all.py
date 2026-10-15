@@ -56,7 +56,7 @@ class RunReport:
 
 def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
                         target_res: int, on_unchanged: str = 'symlink',
-                        variables: str | None = None,
+                        variables: list[str] | None = None,
                         weights_dir: Path | None = None,
                         min_pass_pct: int = DEFAULT_MIN_PASS_PCT,
                         verbose: bool = False,
@@ -73,18 +73,25 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
     that found fewer experiments.
     """
     experiments_root = Path(experiments_root).resolve()
-    experiment_dirs = filter_experiments(find_experiments(experiments_root),
-                                         experiments_root, subset)
-    if not experiment_dirs:
+    experiment_dirs = find_experiments(experiments_root)
+    selected = filter_experiments(experiment_dirs, subset)
+    if not selected:
+        if subset is not None and experiment_dirs:
+            # "No experiments found" would read as an empty archive, when the
+            # archive was fine and the selection kept none of it.
+            raise FileNotFoundError(
+                f'the subset selection matched none of the '
+                f'{len(experiment_dirs)} experiment(s) found under '
+                f'{experiments_root}')
         raise FileNotFoundError(
             f'no experiments found under {experiments_root} -- checked '
             f'against the experiment sets this package is configured for')
-    LOGGER.info('found %d experiment(s) under %s', len(experiment_dirs),
+    LOGGER.info('found %d experiment(s) under %s', len(selected),
                 experiments_root)
 
     started = utc_now()
     report = RunReport(experiments_root)
-    for experiment_dir in experiment_dirs:
+    for experiment_dir in selected:
         LOGGER.info('=== processing experiment: %s ===', experiment_dir)
         try:
             result = process_experiment(
@@ -116,29 +123,31 @@ def run_all_experiments(experiments_root: Path, output_root: Path, domain: str,
 
 
 def _write_run_log(logs_dir: Path, report: RunReport, domain: str,
-                   target_res: int, on_unchanged: str, variables: str | None,
+                   target_res: int, on_unchanged: str, variables: list[str] | None,
                    subset: Subset | None, min_pass_pct: int,
                    started: datetime) -> Path:
     logs_dir.mkdir(parents=True, exist_ok=True)
     run_log = logs_dir / f'run_{started.strftime("%Y%m%dT%H%M%SZ")}.log'
-    lines = [f'{name + ":":<19} {value}' for name, value in [
+    fields = [
         ('domain', domain),
         ('target_res_m', target_res),
         ('experiments_root', report.experiments_root),
         ('on_unchanged', on_unchanged),
-        ('variables', variables or '(all)'),
-    ]]
+        ('variables', ' '.join(variables) if variables else '(all)'),
+    ]
     if subset is not None:
-        lines += [f'{name + ":":<19} {value}'
-                  for name, value in subset.summary().items()]
+        fields += list(subset.summary().items())
+    fields += [
+        ('min_pass_pct', min_pass_pct),
+        ('version', __version__),
+        ('started_utc', _stamp(started)),
+        ('finished_utc', _stamp(utc_now())),
+        ('experiments_total', report.n_total),
+        ('experiments_passed', report.n_passed),
+        ('pass_pct', report.pass_pct),
+    ]
+    lines = [f'{name + ":":<19} {value}' for name, value in fields]
     lines += [
-        f'min_pass_pct:       {min_pass_pct}',
-        f'version:            {__version__}',
-        f'started_utc:        {_stamp(started)}',
-        f'finished_utc:       {_stamp(utc_now())}',
-        f'experiments_total:  {report.n_total}',
-        f'experiments_passed: {report.n_passed}',
-        f'pass_pct:           {report.pass_pct}',
         '--- per-experiment results (each experiment has its own file-level '
         'log in this directory) ---',
     ]

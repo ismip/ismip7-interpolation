@@ -47,13 +47,17 @@ a time series regriddable. See {doc}`methods`.
 ```bash
 ismip7-process-experiment --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--on-unchanged symlink|copy|skip] \
-    [--variables VAR1,VAR2,...] [--weights-dir DIR] \
-    EXPERIMENT_DIR OUTPUT_ROOT
+    [--weights-dir DIR] \
+    EXPERIMENT_DIR OUTPUT_ROOT [--variables VAR1 VAR2 ...]
 ```
 
 Every .nc file directly inside the experiment directory is regridded, never
 anything below it. A file that fails is logged and the rest continue; the
 command exits non-zero if any failed.
+
+`--variables` takes one or more variable names and must come after
+EXPERIMENT_DIR and OUTPUT_ROOT, which it would otherwise read as variable
+names.
 
 Without `--experiments-root`, the last four components of the experiment's
 path, group/model/set/experiment, are mirrored into the output.
@@ -64,9 +68,9 @@ path, group/model/set/experiment, are mirrored into the output.
 ismip7-run-all --domain GrIS --target-res 4000 \
     [--experiments-root ROOT] [--output-root DIR] \
     [--on-unchanged symlink|copy|skip] [--min-pass-pct PCT] \
-    [--variables VAR1,VAR2,...] [--weights-dir DIR] \
-    [--groups G1,G2,...] [--models M1,M2,...] [--sets SET1,SET2,...] \
-    [--experiments EXP1,EXP2,...]
+    [--variables VAR1 VAR2 ...] [--weights-dir DIR] \
+    [--groups G1 G2 ...] [--models M1 M2 ...] [--sets SET1 SET2 ...] \
+    [--experiments EXP1 EXP2 ...]
 ```
 
 A failing experiment is logged and skipped. The run as a whole fails only if
@@ -75,8 +79,8 @@ fewer than `--min-pass-pct` percent of experiments succeed, 60 by default.
 ### Selecting a subset
 
 Without a filter, every experiment in the archive is regridded. The four
-subset options each take comma-separated names and narrow the run to
-experiments whose group/model/set/experiment path matches:
+subset options each take one or more names and narrow the run to experiments
+whose group/model/set/experiment path matches:
 
 ```bash
 ismip7-run-all --domain AIS --target-res 16000 \
@@ -87,8 +91,10 @@ ismip7-run-all --domain AIS --target-res 16000 \
 The filters narrow jointly. The output tree keeps the full
 group/model/set/experiment paths, so a filtered run looks exactly like an
 unfiltered one of a smaller archive, and the run log records the filters
-used. A selection that matches nothing fails the run as "no experiments
-found".
+used. A name that matches no experiment is an error naming it, so a typo
+cannot silently leave part of the archive unprocessed; a selection whose
+filters match nothing jointly fails the run as "the subset selection matched
+none of the N experiment(s) found".
 
 ### Which directories count as experiments
 
@@ -114,7 +120,7 @@ ESM (E001-E999) and PPE (P001-P999).
 | `--target-res` | the ISMIP7 grid to regrid onto, as a resolution in meters; required | |
 | `--experiments-root` | the ice sheet directory of the archive | the NIRD archive for the domain |
 | `--output-root` | where the output tree goes; run-all only | output |
-| `--variables` | only these variables, by the name that starts each filename, e.g. lithk,acabf | every variable |
+| `--variables` | only these variables, by the name that starts each filename, e.g. lithk acabf | every variable |
 | `--on-unchanged` | what to put in the output for a file that needs no regridding: symlink, copy or skip | symlink |
 | `--weights-dir` | where the remap weights are kept | ~/.cache/ismip7-interpolation/weights |
 | `--min-pass-pct` | fail the run if fewer than this percentage of experiments succeed; run-all only | 60 |
@@ -128,8 +134,9 @@ Asking for a resolution ISMIP7 does not have lists the ones it does:
 no ISMIP7 grid for domain=GrIS resolution=4m (known GrIS resolutions: 1000, 2000, 4000, 5000, 8000, 16000)
 ```
 
-Spaces in `--variables` are fine: `--variables "lithk, acabf"` means what it
-looks like. An experiment with none of the requested variables is logged and
-skipped, not counted as a failure, since some variables are optional.
+Extra spaces around any name are harmless: `--variables " lithk  acabf "`
+means lithk and acabf. An experiment with none of the requested variables is
+logged and skipped, not counted as a failure, since some variables are
+optional.
 
 Every log records the version, so a regridded archive says what produced it.

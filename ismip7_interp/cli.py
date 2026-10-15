@@ -59,25 +59,28 @@ def add_grid_arguments(parser: argparse.ArgumentParser) -> None:
 def add_variables_argument(parser: argparse.ArgumentParser) -> None:
     """Add the ``--variables`` filter."""
     parser.add_argument(
-        '--variables', metavar='VAR1,VAR2,...',
+        '--variables', nargs='*', metavar='VARS',
         help='only these variables, by the name that starts each filename, '
-             'e.g. lithk,acabf (default: every variable found)')
+             'e.g. --variables lithk acabf (default: every variable found)')
 
 
 def add_subset_arguments(parser: argparse.ArgumentParser) -> None:
     """Add the archive subset selection: group, model, set, experiment."""
     parser.add_argument(
-        '--groups', metavar='G1,G2,...',
-        help='only these groups, e.g. NORCE (default: every group)')
+        '--groups', nargs='+', metavar='G',
+        help='only these groups, e.g. --groups NORCE AWI (default: every '
+             'group)')
     parser.add_argument(
-        '--models', metavar='M1,M2,...',
-        help='only these models, e.g. CISM (default: every model)')
+        '--models', nargs='+', metavar='M',
+        help='only these models, e.g. --models CISM (default: every model)')
     parser.add_argument(
-        '--sets', metavar='SET1,SET2,...',
-        help='only these experiment sets, e.g. CORE (default: every set)')
+        '--sets', nargs='+', metavar='SET',
+        help='only these experiment sets, e.g. --sets CORE (default: every '
+             'set)')
     parser.add_argument(
-        '--experiments', metavar='EXP1,EXP2,...',
-        help='only these experiments, e.g. C011 (default: every experiment)')
+        '--experiments', nargs='+', metavar='EXP',
+        help='only these experiments, e.g. --experiments C011 (default: '
+             'every experiment)')
 
 
 def add_weights_argument(parser: argparse.ArgumentParser) -> None:

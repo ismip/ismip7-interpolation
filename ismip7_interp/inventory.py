@@ -204,7 +204,7 @@ def scan_experiment(experiment_dir: Path, domain: str, target_points: int,
 
 def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
                       target_res: int,
-                      variables: str | None = None,
+                      variables: list[str] | None = None,
                       subset: Subset | None = None) -> Inventory:
     """Scan an archive, writing the two CSVs and the summary.
 
@@ -229,9 +229,11 @@ def inventory_archive(experiments_root: Path, output_dir: Path, domain: str,
 
     inventory = Inventory()
     experiment_dirs = find_experiments(experiments_root)
-    selected = filter_experiments(experiment_dirs, experiments_root, subset)
+    selected = filter_experiments(experiment_dirs, subset)
     if subset is not None and not selected:
-        LOGGER.warning('no experiments match the subset selection')
+        LOGGER.warning('the subset selection matched none of the %d '
+                       'experiment(s) found under %s', len(experiment_dirs),
+                       experiments_root)
     for number, experiment_dir in enumerate(selected, start=1):
         LOGGER.info('[%d] scanning %s', number, experiment_dir)
         rows, summary = scan_experiment(experiment_dir, domain, target_points,
@@ -258,7 +260,7 @@ def _grid_points(domain: str, res_m: int) -> int:
 
 def _write_inventory(inventory: Inventory, output_dir: Path,
                      experiments_root: Path, domain: str, target_res: int,
-                     variables: str | None, subset: Subset | None,
+                     variables: list[str] | None, subset: Subset | None,
                      started: datetime) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     # newline='' and csv.DictWriter, not manual string joining: an archive path
@@ -278,7 +280,7 @@ def _write_inventory(inventory: Inventory, output_dir: Path,
     counts = inventory.status_counts
     fields = {'domain': domain, 'target_res_m': target_res,
               'experiments_root': experiments_root,
-              'variables': variables or '(all)'}
+              'variables': ' '.join(variables) if variables else '(all)'}
     if subset is not None:
         fields.update(subset.summary())
     fields.update({
